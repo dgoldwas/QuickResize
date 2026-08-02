@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026.08.02.7 — 2026-08-02
+
+- Persisted the light/dark theme preference in the user’s Windows AppData settings.
+
 ## 2026.08.02.6 — 2026-08-02
 
 - Fixed the queue card so Move up, Move down, Remove, and Clear queue remain visible while the file list expands.
@@ -39,4 +43,4 @@
 
 ## Versioning
 
-QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.08.02.6` is the sixth release on August 2, 2026.
+QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.08.02.7` is the seventh release on August 2, 2026.

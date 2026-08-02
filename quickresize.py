@@ -7,6 +7,7 @@ Install dependencies with: pip install -r requirements.txt
 from __future__ import annotations
 
 import os
+import json
 import queue
 import threading
 from pathlib import Path
@@ -15,7 +16,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageOps, ImageTk
 
-APP_VERSION = "2026.08.02.6"
+APP_VERSION = "2026.08.02.7"
 
 try:
     from pillow_heif import register_heif_opener
@@ -92,8 +93,8 @@ class QuickResizeApp:
         self.destination_var = tk.StringVar(value=str(Path.home() / "Pictures" / "QuickResize"))
         self.status_var = tk.StringVar(value="Ready — drop photos here to begin")
         self.count_var = tk.StringVar(value="0 photos queued")
-        self.theme_var = tk.StringVar(value="Dark theme")
-        self.dark_mode = False
+        self.dark_mode = self._load_dark_mode()
+        self.theme_var = tk.StringVar(value="Light theme" if self.dark_mode else "Dark theme")
         self.drop_widgets: list[tk.Widget] = []
         self.field_widgets: list[ttk.Widget] = []
         self.queue_drag_index: int | None = None
@@ -257,7 +258,31 @@ class QuickResizeApp:
     def toggle_theme(self):
         self.dark_mode = not self.dark_mode
         self.theme_var.set("Light theme" if self.dark_mode else "Dark theme")
+        self._save_dark_mode()
         self.apply_theme()
+
+    @staticmethod
+    def _settings_path() -> Path:
+        appdata = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+        return appdata / "QuickResize" / "settings.json"
+
+    @classmethod
+    def _load_dark_mode(cls) -> bool:
+        try:
+            with cls._settings_path().open("r", encoding="utf-8") as settings_file:
+                return bool(json.load(settings_file).get("dark_mode", False))
+        except (OSError, ValueError, TypeError):
+            return False
+
+    def _save_dark_mode(self):
+        try:
+            settings_path = self._settings_path()
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
+            with settings_path.open("w", encoding="utf-8") as settings_file:
+                json.dump({"dark_mode": self.dark_mode}, settings_file, indent=2)
+        except OSError:
+            # A read-only profile should not prevent the app from working.
+            pass
 
     def apply_theme(self):
         colors = {
