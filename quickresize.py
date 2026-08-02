@@ -15,7 +15,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageOps, ImageTk
 
-APP_VERSION = "2026.08.02.5"
+APP_VERSION = "2026.08.02.6"
 
 try:
     from pillow_heif import register_heif_opener
@@ -187,17 +187,17 @@ class QuickResizeApp:
         queue_card = ttk.Frame(outer, style="Card.TFrame", padding=18)
         queue_card.pack(fill="both", expand=True, pady=(12, 0))
         ttk.Label(queue_card, textvariable=self.count_var, style="CardTitle.TLabel").pack(anchor="w")
-        self.listbox = tk.Listbox(queue_card, height=5, borderwidth=0, highlightthickness=0, font=("Segoe UI", 9), activestyle="none")
-        self.listbox.pack(fill="both", expand=True, pady=(8, 0))
-        self.listbox.bind("<ButtonPress-1>", self._queue_press)
-        self.listbox.bind("<B1-Motion>", self._queue_drag)
-        self.listbox.bind("<ButtonRelease-1>", self._queue_release)
         queue_actions = ttk.Frame(queue_card, style="Card.TFrame")
         queue_actions.pack(fill="x", pady=(8, 0))
         ttk.Button(queue_actions, text="Clear queue", style="Secondary.TButton", command=self.clear_queue).pack(side="right")
         ttk.Button(queue_actions, text="Remove", style="Secondary.TButton", command=self.remove_selected).pack(side="right", padx=(0, 6))
         ttk.Button(queue_actions, text="Move down", style="Secondary.TButton", command=lambda: self.move_selected(1)).pack(side="left")
         ttk.Button(queue_actions, text="Move up", style="Secondary.TButton", command=lambda: self.move_selected(-1)).pack(side="left", padx=(0, 6))
+        self.listbox = tk.Listbox(queue_card, height=5, borderwidth=0, highlightthickness=0, font=("Segoe UI", 9), activestyle="none")
+        self.listbox.pack(fill="both", expand=True, pady=(8, 0))
+        self.listbox.bind("<ButtonPress-1>", self._queue_press)
+        self.listbox.bind("<B1-Motion>", self._queue_drag)
+        self.listbox.bind("<ButtonRelease-1>", self._queue_release)
 
     def _refresh_queue(self, selected: int | None = None):
         self.listbox.delete(0, "end")

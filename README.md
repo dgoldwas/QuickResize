@@ -1,4 +1,4 @@
-# QuickResize v2026.08.02.5
+# QuickResize v2026.08.02.6
 
 QuickResize is a lightweight Windows desktop batch converter for photos, camera RAW files, PDFs, and Photoshop documents. It resizes each input to fit inside a maximum width and height while preserving the original aspect ratio, then saves the result in a chosen output format.
 
@@ -45,7 +45,7 @@ The finished executable will be in `dist\QuickResize.exe`.
 
 ## Release versioning
 
-The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.08.02.5`, is the fifth release on August 2, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.08.02.6`, is the sixth release on August 2, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
