@@ -15,7 +15,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageOps, ImageTk
 
-APP_VERSION = "0.26.8.4"
+APP_VERSION = "0.26.8.5"
 
 try:
     from pillow_heif import register_heif_opener
@@ -110,18 +110,22 @@ class QuickResizeApp:
             pass
         style.configure("App.TFrame", background="#f5f7fb")
         style.configure("Card.TFrame", background="white")
-        style.configure("Title.TLabel", background="#f5f7fb", foreground="#162033", font=("Segoe UI", 24, "bold"))
+        style.configure("Title.TLabel", background="#f5f7fb", foreground="#162033", font=("Segoe UI", 25, "bold"))
         style.configure("Subtitle.TLabel", background="#f5f7fb", foreground="#647084", font=("Segoe UI", 10))
         style.configure("CardTitle.TLabel", background="white", foreground="#162033", font=("Segoe UI", 11, "bold"))
         style.configure("CardText.TLabel", background="white", foreground="#667085", font=("Segoe UI", 9))
-        style.configure("Accent.TButton", font=("Segoe UI", 10, "bold"))
+        style.configure("Badge.TLabel", background="#e8f0ff", foreground="#2459c3", font=("Segoe UI", 8, "bold"), padding=(8, 4))
+        style.configure("TButton", font=("Segoe UI", 9), padding=(11, 7), relief="flat", borderwidth=0)
+        style.configure("Secondary.TButton", font=("Segoe UI", 9), padding=(11, 7), relief="flat", borderwidth=0)
+        style.configure("Accent.TButton", font=("Segoe UI", 10, "bold"), padding=(16, 9), relief="flat", borderwidth=0)
 
         outer = ttk.Frame(self.root, style="App.TFrame", padding=(28, 22))
         outer.pack(fill="both", expand=True)
         header = ttk.Frame(outer, style="App.TFrame")
         header.pack(fill="x")
         ttk.Label(header, text="QuickResize", style="Title.TLabel").pack(side="left")
-        self.theme_button = ttk.Button(header, textvariable=self.theme_var, command=self.toggle_theme)
+        ttk.Label(header, text=f"v{APP_VERSION}", style="Badge.TLabel").pack(side="left", padx=(12, 0), pady=(8, 0))
+        self.theme_button = ttk.Button(header, textvariable=self.theme_var, style="Secondary.TButton", command=self.toggle_theme)
         self.theme_button.pack(side="right", pady=(8, 0))
         ttk.Label(outer, text="Resize a batch of photos in seconds", style="Subtitle.TLabel").pack(anchor="w", pady=(2, 18))
 
@@ -130,7 +134,7 @@ class QuickResizeApp:
         drop.pack(fill="x", ipady=27)
         drop.bind("<Button-1>", lambda _event: self.choose_files())
         icon = tk.Label(drop, text="+", font=("Segoe UI", 28, "bold"))
-        title = tk.Label(drop, text="Drop photos here", font=("Segoe UI", 14, "bold"))
+        title = tk.Label(drop, text="Drop files to resize", font=("Segoe UI", 15, "bold"))
         note = tk.Label(drop, font=("Segoe UI", 9))
         self.drop_widgets.extend([icon, title, note])
         icon.pack()
@@ -184,10 +188,10 @@ class QuickResizeApp:
         self.listbox.bind("<ButtonRelease-1>", self._queue_release)
         queue_actions = ttk.Frame(queue_card, style="Card.TFrame")
         queue_actions.pack(fill="x", pady=(8, 0))
-        ttk.Button(queue_actions, text="Clear queue", command=self.clear_queue).pack(side="right")
-        ttk.Button(queue_actions, text="Remove", command=self.remove_selected).pack(side="right", padx=(0, 6))
-        ttk.Button(queue_actions, text="Move down", command=lambda: self.move_selected(1)).pack(side="left")
-        ttk.Button(queue_actions, text="Move up", command=lambda: self.move_selected(-1)).pack(side="left", padx=(0, 6))
+        ttk.Button(queue_actions, text="Clear queue", style="Secondary.TButton", command=self.clear_queue).pack(side="right")
+        ttk.Button(queue_actions, text="Remove", style="Secondary.TButton", command=self.remove_selected).pack(side="right", padx=(0, 6))
+        ttk.Button(queue_actions, text="Move down", style="Secondary.TButton", command=lambda: self.move_selected(1)).pack(side="left")
+        ttk.Button(queue_actions, text="Move up", style="Secondary.TButton", command=lambda: self.move_selected(-1)).pack(side="left", padx=(0, 6))
 
         bottom = ttk.Frame(outer, style="App.TFrame")
         bottom.pack(fill="x", pady=(14, 0))
@@ -266,6 +270,12 @@ class QuickResizeApp:
             "drop_border": "#416caa" if self.dark_mode else "#a9c7ff",
             "drop_title": "#8bb8ff" if self.dark_mode else "#1d4ed8",
             "list_text": "#d8e0ea" if self.dark_mode else "#344054",
+            "button": "#2a3341" if self.dark_mode else "#ffffff",
+            "button_hover": "#354154" if self.dark_mode else "#eef3f9",
+            "accent": "#3b82f6" if self.dark_mode else "#2563eb",
+            "accent_hover": "#60a5fa" if self.dark_mode else "#1d4ed8",
+            "badge": "#263b63" if self.dark_mode else "#e8f0ff",
+            "badge_text": "#a9c8ff" if self.dark_mode else "#2459c3",
         }
         self.root.configure(bg=colors["app"])
         style = ttk.Style()
@@ -275,6 +285,13 @@ class QuickResizeApp:
         style.configure("Subtitle.TLabel", background=colors["app"], foreground=colors["muted"])
         style.configure("CardTitle.TLabel", background=colors["card"], foreground=colors["text"])
         style.configure("CardText.TLabel", background=colors["card"], foreground=colors["muted"])
+        style.configure("Badge.TLabel", background=colors["badge"], foreground=colors["badge_text"])
+        style.configure("TButton", background=colors["button"], foreground=colors["text"])
+        style.configure("Secondary.TButton", background=colors["button"], foreground=colors["text"])
+        style.configure("Accent.TButton", background=colors["accent"], foreground="white")
+        style.map("TButton", background=[("active", colors["button_hover"]), ("pressed", colors["button_hover"])], foreground=[("disabled", colors["muted"])])
+        style.map("Secondary.TButton", background=[("active", colors["button_hover"]), ("pressed", colors["button_hover"])], foreground=[("disabled", colors["muted"])])
+        style.map("Accent.TButton", background=[("active", colors["accent_hover"]), ("pressed", colors["accent_hover"]), ("disabled", colors["button_hover"])], foreground=[("disabled", colors["muted"])])
         style.configure("Dark.TEntry", fieldbackground=colors["field"], foreground=colors["text"], insertcolor=colors["text"])
         style.configure("Dark.TCombobox", fieldbackground=colors["field"], background=colors["field"], foreground=colors["text"], arrowcolor=colors["text"], selectbackground=colors["drop"], selectforeground=colors["text"])
         style.map("Dark.TEntry", fieldbackground=[("disabled", colors["field"]), ("readonly", colors["field"])])

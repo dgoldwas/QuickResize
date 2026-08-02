@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.26.8.5 — 2026-08-02
+
+- Refreshed the UI with flatter modern controls, clearer hierarchy, a version badge, softer spacing, and updated light/dark color systems.
+
 ## 0.26.8.4 — 2026-08-02
 
 - Fixed PDF picker layout so all three thumbnail columns remain visible.
@@ -22,4 +26,4 @@
 
 ## Versioning
 
-QuickResize uses `0.M.D.P` versioning, where `M.D` follows the release date and `P` increments patches on that date. Version `0.26.8.4` means the fourth patch release on August 2, 2026.
+QuickResize uses `0.M.D.P` versioning, where `M.D` follows the release date and `P` increments patches on that date. Version `0.26.8.5` means the fifth patch release on August 2, 2026.

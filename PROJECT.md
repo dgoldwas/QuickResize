@@ -26,7 +26,7 @@ QuickResize provides a focused Windows workflow for reducing or converting many 
 
 ## Version policy
 
-QuickResize uses the requested `0.26.8.4` style: `26.8.4` records August 2, 2026, while the leading `0` keeps the project in pre-1.0 status. The final component is the patch sequence for that date. Keep the exact version in `VERSION`, `APP_VERSION`, the changelog, release tag, and executable documentation synchronized.
+QuickResize uses the requested `0.26.8.5` style: `26.8.5` records August 2, 2026, while the leading `0` keeps the project in pre-1.0 status. The final component is the patch sequence for that date. Keep the exact version in `VERSION`, `APP_VERSION`, the changelog, release tag, and executable documentation synchronized.
 
 ## Build and verify
 
@@ -45,5 +45,5 @@ The build creates `dist\QuickResize.exe`. A practical smoke test should cover a 
 - Build the standalone executable.
 - Inspect `git status` and stage only intended project files.
 - Commit with the release version in the message.
-- Push the release branch and create the GitHub release tag `v0.26.8.4`.
+- Push the release branch and create the GitHub release tag `v0.26.8.5`.
 - Attach `dist\QuickResize.exe` to the GitHub release.
