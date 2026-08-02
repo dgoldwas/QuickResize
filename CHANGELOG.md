@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026.08.02.5 — 2026-08-02
+
+- Fixed the main layout so the Resize photos action bar is reserved before the queue expands.
+
 ## 2026.08.02.4 — 2026-08-02
 
 - Switched versioning to `YYYY.MM.DD.counter` format.
@@ -31,4 +35,4 @@
 
 ## Versioning
 
-QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.08.02.4` is the fourth release on August 2, 2026.
+QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.08.02.5` is the fifth release on August 2, 2026.

@@ -15,7 +15,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageOps, ImageTk
 
-APP_VERSION = "2026.08.02.4"
+APP_VERSION = "2026.08.02.5"
 
 try:
     from pillow_heif import register_heif_opener
@@ -178,6 +178,12 @@ class QuickResizeApp:
         self.field_widgets.append(destination_entry)
         ttk.Button(line, text="Browse…", command=self.choose_destination).pack(side="left", padx=(8, 0))
 
+        bottom = ttk.Frame(outer, style="App.TFrame")
+        bottom.pack(fill="x", pady=(14, 0))
+        ttk.Label(bottom, textvariable=self.status_var, style="Subtitle.TLabel").pack(side="left")
+        self.resize_button = ttk.Button(bottom, text="Resize photos", style="Accent.TButton", command=self.start_resize)
+        self.resize_button.pack(side="right")
+
         queue_card = ttk.Frame(outer, style="Card.TFrame", padding=18)
         queue_card.pack(fill="both", expand=True, pady=(12, 0))
         ttk.Label(queue_card, textvariable=self.count_var, style="CardTitle.TLabel").pack(anchor="w")
@@ -192,12 +198,6 @@ class QuickResizeApp:
         ttk.Button(queue_actions, text="Remove", style="Secondary.TButton", command=self.remove_selected).pack(side="right", padx=(0, 6))
         ttk.Button(queue_actions, text="Move down", style="Secondary.TButton", command=lambda: self.move_selected(1)).pack(side="left")
         ttk.Button(queue_actions, text="Move up", style="Secondary.TButton", command=lambda: self.move_selected(-1)).pack(side="left", padx=(0, 6))
-
-        bottom = ttk.Frame(outer, style="App.TFrame")
-        bottom.pack(fill="x", pady=(14, 0))
-        ttk.Label(bottom, textvariable=self.status_var, style="Subtitle.TLabel").pack(side="left")
-        self.resize_button = ttk.Button(bottom, text="Resize photos", style="Accent.TButton", command=self.start_resize)
-        self.resize_button.pack(side="right")
 
     def _refresh_queue(self, selected: int | None = None):
         self.listbox.delete(0, "end")
