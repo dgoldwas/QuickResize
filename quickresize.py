@@ -15,7 +15,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageOps, ImageTk
 
-APP_VERSION = "0.26.8.2"
+APP_VERSION = "0.26.8.3"
 
 try:
     from pillow_heif import register_heif_opener
@@ -448,7 +448,7 @@ class QuickResizeApp:
         jobs = [(source, page) for source in self.files for page in (self.pdf_pages.get(source, [None]) if source.suffix.lower() == ".pdf" else [None])]
         for index, (source, page) in enumerate(jobs, start=1):
             try:
-                image = self._load_image(source, page)
+                image = self._load_image(source, page, (width, height))
                 image = ImageOps.exif_transpose(image)
                 image.thumbnail((width, height), Image.Resampling.LANCZOS)
                 if fmt == "JPG":
@@ -475,13 +475,18 @@ class QuickResizeApp:
         self.events.put(("done", (successes, errors, str(output_dir))))
 
     @staticmethod
-    def _load_image(source: Path, page: int | None = None) -> Image.Image:
+    def _load_image(source: Path, page: int | None = None, target_size: tuple[int, int] | None = None) -> Image.Image:
         if source.suffix.lower() == ".pdf":
             if not PDF_AVAILABLE:
                 raise RuntimeError("PDF support requires the pymupdf package")
             document = fitz.open(str(source))
             pdf_page = document.load_page(page or 0)
-            pixmap = pdf_page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+            page_rect = pdf_page.rect
+            target_width, target_height = target_size or (1600, 1600)
+            # PDF coordinates are points at 72 DPI. Render large enough that
+            # the later aspect-ratio-preserving resize can reach the target.
+            scale = max(target_width / page_rect.width, target_height / page_rect.height, 1.0)
+            pixmap = pdf_page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
             image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
             document.close()
             return image

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.26.8.3 — 2026-08-02
+
+- Fixed PDF rendering so selected pages can reach the requested maximum dimensions instead of being limited by a fixed 2x render scale.
+
 ## 0.26.8.2 — 2026-08-02
 
 - PDF page selection opens with no pages selected.
@@ -12,4 +16,4 @@
 
 ## Versioning
 
-QuickResize uses `0.M.D.P` versioning, where `M.D` follows the release date and `P` increments patches on that date. Version `0.26.8.2` means the second patch release on August 2, 2026.
+QuickResize uses `0.M.D.P` versioning, where `M.D` follows the release date and `P` increments patches on that date. Version `0.26.8.3` means the third patch release on August 2, 2026.
