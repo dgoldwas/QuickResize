@@ -15,7 +15,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageOps, ImageTk
 
-APP_VERSION = "0.26.8.3"
+APP_VERSION = "0.26.8.4"
 
 try:
     from pillow_heif import register_heif_opener
@@ -77,8 +77,8 @@ class QuickResizeApp:
     def __init__(self, root: tk.Misc):
         self.root = root
         self.root.title(f"QuickResize v{APP_VERSION}")
-        self.root.geometry("720x650")
-        self.root.minsize(620, 560)
+        self.root.geometry("820x760")
+        self.root.minsize(760, 680)
         self.root.configure(bg="#f5f7fb")
 
         self.files: list[Path] = []
@@ -329,7 +329,8 @@ class QuickResizeApp:
         dialog.title(f"Choose pages — {path.name}")
         dialog.transient(self.root)
         dialog.grab_set()
-        dialog.geometry("620x560")
+        dialog.geometry("820x700")
+        dialog.minsize(700, 560)
         dark = self.dark_mode
         background = "#141821" if dark else "#f5f7fb"
         foreground = "#f1f5f9" if dark else "#162033"
@@ -341,15 +342,19 @@ class QuickResizeApp:
         actions.pack(fill="x", padx=18, pady=(12, 10))
         selected_text = tk.StringVar(value=f"0 of {page_count} pages selected")
         tk.Label(actions, textvariable=selected_text, bg=background, fg=muted, font=("Segoe UI", 9)).pack(side="left")
-        canvas = tk.Canvas(dialog, bg=background, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
+        content = tk.Frame(dialog, bg=background)
+        content.pack(fill="both", expand=True, padx=18)
+        canvas = tk.Canvas(content, bg=background, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(content, orient="vertical", command=canvas.yview)
         canvas.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side="right", fill="y", padx=(0, 18), pady=(0, 8))
-        canvas.pack(side="left", fill="both", expand=True, padx=(18, 0), pady=(0, 8))
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
         thumb_frame = tk.Frame(canvas, bg=background)
         canvas_window = canvas.create_window((0, 0), window=thumb_frame, anchor="nw")
         thumb_frame.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.bind("<Configure>", lambda event: canvas.itemconfigure(canvas_window, width=event.width))
+        for column in range(3):
+            thumb_frame.grid_columnconfigure(column, weight=1)
         page_vars: list[tk.BooleanVar] = []
         dialog._thumbnail_images = []
 
@@ -406,7 +411,7 @@ class QuickResizeApp:
             dialog.destroy()
 
         buttons = ttk.Frame(dialog)
-        buttons.pack(fill="x", padx=18, pady=14)
+        buttons.pack(fill="x", padx=18, pady=(0, 16))
         ttk.Button(buttons, text="Cancel", command=cancel).pack(side="right")
         ttk.Button(buttons, text="Use selected pages", command=accept).pack(side="right", padx=(0, 8))
         dialog.protocol("WM_DELETE_WINDOW", cancel)

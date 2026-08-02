@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.26.8.4 — 2026-08-02
+
+- Fixed PDF picker layout so all three thumbnail columns remain visible.
+- Moved PDF action buttons into a fixed bottom bar.
+- Increased the main window default and minimum size so queue controls remain visible.
+
 ## 0.26.8.3 — 2026-08-02
 
 - Fixed PDF rendering so selected pages can reach the requested maximum dimensions instead of being limited by a fixed 2x render scale.
@@ -16,4 +22,4 @@
 
 ## Versioning
 
-QuickResize uses `0.M.D.P` versioning, where `M.D` follows the release date and `P` increments patches on that date. Version `0.26.8.3` means the third patch release on August 2, 2026.
+QuickResize uses `0.M.D.P` versioning, where `M.D` follows the release date and `P` increments patches on that date. Version `0.26.8.4` means the fourth patch release on August 2, 2026.
