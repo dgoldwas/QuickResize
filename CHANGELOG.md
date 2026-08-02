@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026.08.02.4 — 2026-08-02
+
+- Switched versioning to `YYYY.MM.DD.counter` format.
+- The final number is the release counter for that calendar day.
+
 ## 0.26.8.5 — 2026-08-02
 
 - Refreshed the UI with flatter modern controls, clearer hierarchy, a version badge, softer spacing, and updated light/dark color systems.
@@ -26,4 +31,4 @@
 
 ## Versioning
 
-QuickResize uses `0.M.D.P` versioning, where `M.D` follows the release date and `P` increments patches on that date. Version `0.26.8.5` means the fifth patch release on August 2, 2026.
+QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.08.02.4` is the fourth release on August 2, 2026.

@@ -15,7 +15,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageOps, ImageTk
 
-APP_VERSION = "0.26.8.5"
+APP_VERSION = "2026.08.02.4"
 
 try:
     from pillow_heif import register_heif_opener
