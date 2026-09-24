@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026.09.23.1 — 2026-09-23
+
+- Made the dark interface permanent and removed the theme switch.
+- Reorganized the main window into clear queue, resize settings, and destination sections.
+- Remembered the destination folder between launches, including paths typed into the field.
+- Added a custom application icon to the Windows build.
+
 ## 2026.08.02.7 — 2026-08-02
 
 - Persisted the light/dark theme preference in the user’s Windows AppData settings.
@@ -43,4 +50,4 @@
 
 ## Versioning
 
-QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.08.02.7` is the seventh release on August 2, 2026.
+QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.09.23.1` is the first release on September 23, 2026.

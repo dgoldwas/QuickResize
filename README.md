@@ -1,4 +1,4 @@
-# QuickResize v2026.08.02.7
+# QuickResize v2026.09.23.1
 
 QuickResize is a lightweight Windows desktop batch converter for photos, camera RAW files, PDFs, and Photoshop documents. It resizes each input to fit inside a maximum width and height while preserving the original aspect ratio, then saves the result in a chosen output format.
 
@@ -6,7 +6,8 @@ QuickResize is a lightweight Windows desktop batch converter for photos, camera 
 
 - Drag and drop files or folders into the queue.
 - Queue management with remove, clear, move up/down, and drag-to-reorder controls.
-- Light and dark themes, including themed fields, dropdowns, selections, and focus states.
+- A streamlined dark interface with clear queue, resize, and destination sections.
+- The chosen destination folder is remembered between sessions, including when entered directly.
 - PDF page picker with thumbnails. Pages start unselected; click a thumbnail or checkbox to toggle, or use Select all/Clear selection.
 - HEIC/HEIF decoding through `pillow-heif`.
 - Canon CRW/CR3 RAW decoding through `rawpy` and LibRaw.
@@ -38,14 +39,14 @@ Native file drag-and-drop, HEIC input, RAW input, and PDF input require `tkinter
 
 ```powershell
 py -m pip install -r requirements.txt pyinstaller
-pyinstaller --noconsole --onefile --clean --collect-all rawpy --collect-all pymupdf --name QuickResize quickresize.py
+pyinstaller --noconsole --onefile --clean --icon assets\QuickResize.ico --add-data "assets;assets" --collect-all rawpy --name QuickResize quickresize.py
 ```
 
 The finished executable will be in `dist\QuickResize.exe`.
 
 ## Release versioning
 
-The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.08.02.7`, is the seventh release on August 2, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.09.23.1`, is the first release on September 23, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
