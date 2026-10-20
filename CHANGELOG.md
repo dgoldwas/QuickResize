@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026.10.20.1 — 2026-10-20
+
+- Show the current file and a progress bar while a batch runs, and let the user cancel after the current photo finishes.
+- Lock the queue during a run, then mark each file pending, working, done, failed, or partial.
+- Accept drops anywhere on the window, add an Add folder action, and include subfolders.
+- Report added, skipped, and duplicate files, and warn when a HEIC, RAW, or PDF decoder is missing.
+- Show each queued file's name, type, folder, and status, with a scrollbar.
+- Open the PDF picker immediately, load thumbnails in the background, scroll them with the mouse wheel, highlight selected pages, and accept a page range such as `1-5, 8`.
+- Remember width, height, format, JPG/WEBP quality, and the filename rule along with the destination folder.
+- Add 1920, 1600, 1080, and 800 size presets, and state that smaller images stay at their original size.
+- Let the user keep unique names, overwrite an existing file, or save next to each original.
+- Show the finished batch in the window, with Open folder and a scrollable list of every error.
+- Ask before clearing a queue of 8 or more files.
+- Keep the window sharp on scaled displays.
+
 ## 2026.09.23.1 — 2026-09-23
 
 - Made the dark interface permanent and removed the theme switch.
@@ -50,4 +65,4 @@
 
 ## Versioning
 
-QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.09.23.1` is the first release on September 23, 2026.
+QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.10.20.1` is the first release on October 20, 2026.

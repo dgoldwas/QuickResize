@@ -16,17 +16,17 @@ QuickResize provides a focused Windows workflow for reducing or converting many 
 
 ## Processing flow
 
-1. Files or folders enter the queue through the drop zone or file picker.
-2. PDFs open a page-selection dialog. The dialog renders lightweight thumbnails, starts with every page unselected, and allows thumbnail/checkbox toggling, Select all, and Clear selection.
+1. Files or folders enter the queue by dropping them anywhere, using Add files, or using Add folder. Folders are scanned recursively.
+2. PDFs open a page-selection dialog immediately. Thumbnails load in the background, pages start unselected, and the dialog allows thumbnail or checkbox toggling, a page range, Select all, and Clear selection.
 3. Queue order is controlled by the user with the action buttons or drag-to-reorder.
 4. Each selected input is decoded into a Pillow image. RAW and PDF inputs are converted to RGB first; Photoshop inputs use the flattened composite exposed by Pillow.
-5. EXIF orientation is applied, then `thumbnail()` scales the image inside the maximum dimensions using Lanczos resampling.
+5. EXIF orientation is applied, then `thumbnail()` scales the image inside the maximum dimensions using Lanczos resampling. Images that are already smaller stay at their original size.
 6. Output mode is normalized where necessary, such as compositing transparency onto white for JPG.
-7. The result is written using the chosen output format. PDF pages receive a `_page_###` suffix.
+7. The result is written using the chosen output format and filename rule: a unique name, overwrite, or beside the source file. PDF pages receive a `_page_###` suffix. JPG and WEBP use the selected quality.
 
 ## Version policy
 
-QuickResize uses `YYYY.MM.DD.counter` versioning. For example, `2026.09.23.1` means the first release published on September 23, 2026. The final component resets to `1` at the start of each day and increments for each release that day. Keep the exact version in `VERSION`, `APP_VERSION`, the changelog, release tag, and executable documentation synchronized.
+QuickResize uses `YYYY.MM.DD.counter` versioning. For example, `2026.10.20.1` means the first release published on October 20, 2026. The final component resets to `1` at the start of each day and increments for each release that day. Keep the exact version in `VERSION`, `APP_VERSION`, the changelog, release tag, and executable documentation synchronized.
 
 ## Build and verify
 
@@ -45,5 +45,5 @@ The build creates `dist\QuickResize.exe`. A practical smoke test should cover a 
 - Build the standalone executable.
 - Inspect `git status` and stage only intended project files.
 - Commit with the release version in the message.
-- Push the release branch and create the GitHub release tag `v2026.09.23.1`.
+- Push the release branch and create the GitHub release tag `v2026.10.20.1`.
 - Attach `dist\QuickResize.exe` to the GitHub release.

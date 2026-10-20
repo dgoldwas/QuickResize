@@ -1,14 +1,16 @@
-# QuickResize v2026.09.23.1
+# QuickResize v2026.10.20.1
 
 QuickResize is a lightweight Windows desktop batch converter for photos, camera RAW files, PDFs, and Photoshop documents. It resizes each input to fit inside a maximum width and height while preserving the original aspect ratio, then saves the result in a chosen output format.
 
 ## Highlights
 
-- Drag and drop files or folders into the queue.
+- Drag and drop files or folders anywhere, or add a folder and include its subfolders.
 - Queue management with remove, clear, move up/down, and drag-to-reorder controls.
+- A progress bar, the current filename, and cancel while a batch runs.
 - A streamlined dark interface with clear queue, resize, and destination sections.
-- The chosen destination folder is remembered between sessions, including when entered directly.
-- PDF page picker with thumbnails. Pages start unselected; click a thumbnail or checkbox to toggle, or use Select all/Clear selection.
+- Size, format, JPG/WEBP quality, filename rule, and destination folder are remembered between sessions.
+- Size presets, with smaller images left at their original size.
+- PDF page picker with thumbnails. Pages start unselected; click a thumbnail or checkbox to toggle, enter a page range, or use Select all/Clear selection.
 - HEIC/HEIF decoding through `pillow-heif`.
 - Canon CRW/CR3 RAW decoding through `rawpy` and LibRaw.
 - PSD/PSB input as a flattened composite when supported by Pillow.
@@ -46,7 +48,7 @@ The finished executable will be in `dist\QuickResize.exe`.
 
 ## Release versioning
 
-The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.09.23.1`, is the first release on September 23, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.10.20.1`, is the first release on October 20, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
