@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026.11.03.2 — 2026-11-03
+
+- Added a portable folder download alongside the single EXE. It starts faster, and never unpacks to the temporary folder.
+- Both downloads run the same app with nothing installed, and keep settings in `settings.json` beside the EXE.
+- `build.ps1` now builds both.
+
 ## 2026.11.03.1 — 2026-11-03
 
 ### Portable
@@ -107,4 +113,4 @@
 
 ## Versioning
 
-QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.11.03.1` is the first release on November 3, 2026.
+QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.11.03.2` is the second release on November 3, 2026.

@@ -1,6 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Build recipe for the single-file dist\\QuickResize.exe. Run it with build.ps1."""
+"""Build recipe for both release forms. Run it with build.ps1.
+
+By default this builds the single-file dist\\QuickResize.exe. Adding `-- --folder` to
+the PyInstaller command builds the portable dist\\QuickResize folder instead.
+"""
 import os
+import sys
 
 from PyInstaller.utils.hooks import collect_all
 
@@ -79,17 +84,16 @@ a.binaries = [entry for entry in a.binaries if keep_binary(entry)]
 a.datas = [entry for entry in a.datas if "/translations/" not in entry[0].replace("\\", "/").lower()]
 pyz = PYZ(a.pure)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.datas,
-    [],
+options = dict(
     name="QuickResize",
     debug=False,
     strip=False,
     upx=False,
-    runtime_tmpdir=None,
     console=False,
     icon=[os.path.join(SPECPATH, "assets", "QuickResize.ico")],
 )
+if "--folder" in sys.argv:
+    exe = EXE(pyz, a.scripts, [], exclude_binaries=True, **options)
+    coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="QuickResize")
+else:
+    exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], runtime_tmpdir=None, **options)

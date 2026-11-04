@@ -31,7 +31,7 @@ QuickResize provides a focused Windows workflow for reducing or converting many 
 
 ## Version policy
 
-QuickResize uses `YYYY.MM.DD.counter` versioning. For example, `2026.11.03.1` means the first release published on November 3, 2026. The final component resets to `1` at the start of each day and increments for each release that day. Keep the exact version in `VERSION`, `APP_VERSION` in `qr/__init__.py`, the changelog, release tag, and executable documentation synchronized.
+QuickResize uses `YYYY.MM.DD.counter` versioning. For example, `2026.11.03.2` means the second release published on November 3, 2026. The final component resets to `1` at the start of each day and increments for each release that day. Keep the exact version in `VERSION`, `APP_VERSION` in `qr/__init__.py`, the changelog, release tag, and executable documentation synchronized.
 
 ## Build and verify
 
@@ -41,14 +41,14 @@ py -m pytest tests
 ./build.ps1
 ```
 
-The build creates `dist\QuickResize.exe`. It must keep running with nothing installed. Apart from a temporary folder removed on exit, it writes only `settings.json` beside itself and the chosen output folder. The tests run without showing a window. They do not cover a real RAW file or a native drag from File Explorer, so a practical smoke test should also cover a RAW file when a sample is available, a drag from Explorer, and a window on a scaled display.
+The build creates `dist\QuickResize.exe`, the `dist\QuickResize` folder, and `dist\QuickResize-<version>-portable.zip`. Both forms must keep running with nothing installed, and write only `settings.json` beside the EXE and the chosen output folder. The single file also uses a temporary folder that it removes on exit. The tests run without showing a window. They do not cover a real RAW file or a native drag from File Explorer, so a practical smoke test should also cover a RAW file when a sample is available, a drag from Explorer, and a window on a scaled display.
 
 ## Release checklist
 
 - Update `VERSION`, `APP_VERSION` in `qr/__init__.py`, `CHANGELOG.md`, and this documentation.
 - Run the tests and the smoke test above.
-- Build the EXE.
+- Build both release forms.
 - Inspect `git status` and stage only intended project files.
 - Commit with the release version in the message.
-- Push the release branch and create the GitHub release tag `v2026.11.03.1`.
-- Attach `dist\QuickResize.exe` and `THIRD-PARTY-NOTICES.txt` to the GitHub release.
+- Push the release branch and create the GitHub release tag `v2026.11.03.2`.
+- Attach `dist\QuickResize.exe`, `dist\QuickResize-<version>-portable.zip`, and `THIRD-PARTY-NOTICES.txt` to the GitHub release.

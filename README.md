@@ -1,12 +1,22 @@
-# QuickResize v2026.11.03.1
+# QuickResize v2026.11.03.2
 
 QuickResize is a lightweight Windows desktop batch converter for photos, camera RAW files, PDFs, and Photoshop documents. It resizes each input to fit inside a maximum width and height while preserving the original aspect ratio, then saves the result in a chosen output format.
 
 ## Download
 
-Get `QuickResize.exe` from [Releases](https://github.com/dgoldwas/QuickResize/releases) and run it. It is one file with nothing to install, and it runs from any folder or USB drive on 64-bit Windows 10 or later. Your settings are saved in `settings.json` beside the EXE, so keep them together to carry your settings with you. To remove it, delete both files.
+Get either one from [Releases](https://github.com/dgoldwas/QuickResize/releases). They are the same app, with nothing to install, and both run from any folder or USB drive on 64-bit Windows 10 or later.
 
-While running, the EXE unpacks its components to a temporary folder, which it removes when it closes. Because the EXE is not code-signed, Windows may warn about an unrecognized app the first time. Choose More info, then Run anyway.
+| | `QuickResize.exe` | `QuickResize-<version>-portable.zip` |
+| --- | --- | --- |
+| **Best for** | One file that is easy to carry | Faster starts |
+| **To run** | Open it | Unzip it, then open `QuickResize.exe` inside the folder |
+| **Starts in** | About 2.7 seconds | About 1.5 seconds |
+| **Size on disk** | 63 MB | 163 MB |
+| **While running** | Unpacks to a temporary folder, removed when it closes | Unpacks nothing |
+
+Your settings are saved in `settings.json` beside the EXE, so they travel with it. To remove the app, delete the EXE and `settings.json`, or the whole folder.
+
+Because the app is not code-signed, Windows may warn about an unrecognized app the first time. Choose More info, then Run anyway.
 
 ## Highlights
 
@@ -70,11 +80,11 @@ py -m pytest tests
 ./build.ps1
 ```
 
-This runs the tests in a private `.venv`, then creates `dist\QuickResize.exe`. The build recipe, including what is left out to keep the file small, is in `QuickResize.spec`.
+This runs the tests in a private `.venv`, then creates `dist\QuickResize.exe`, the `dist\QuickResize` folder, and its archive `dist\QuickResize-<version>-portable.zip`. The build recipe, including what is left out to keep them small, is in `QuickResize.spec`.
 
 ## Release versioning
 
-The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.11.03.1`, is the first release on November 3, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.11.03.2`, is the second release on November 3, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
