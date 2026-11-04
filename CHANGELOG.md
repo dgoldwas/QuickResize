@@ -1,5 +1,47 @@
 # Changelog
 
+## 2026.11.03.1 — 2026-11-03
+
+### Portable
+
+- QuickResize is one portable EXE. Run it from any folder or USB drive with nothing installed, and delete it to remove it.
+- Settings live in `settings.json` beside the EXE and travel with it. The packaged app no longer uses `%APPDATA%`, so settings start fresh once.
+- A saved folder on the app's own drive survives a change of drive letter, and one that does not exist on the current PC falls back to the default.
+
+### Redesign
+
+- Rebuilt the interface on Qt, with sharp rendering at every display scale and a dark title bar. The minimum window size drops from 960 x 860 to 860 x 600, so it now fits 768p screens.
+- New first-run screen, and a full-window overlay confirming that a drop lands anywhere.
+- Queue rows show a thumbnail, the size change before you start, and a status. Rows have their own remove and edit-pages buttons on hover.
+- Output settings are always visible, with no dropdowns. Where files go and what happens to existing files are now two separate choices.
+- Invalid settings are explained next to the controls, in place of error dialogs.
+- Results appear in a card with the space saved, Open folder, and Retry failed. Each failure is explained on its row.
+- Clearing and removing can be undone, in place of a confirmation dialog.
+- Multi-select, dragging several rows at once, keyboard shortcuts, and PDF page editing from the list.
+- The PDF picker adds Shift+click runs, and shows its thumbnails only as they scroll into view.
+
+### Faster
+
+- Batches run in parallel: a 32-photo test batch went from 14.1 s to 2.9 s on a 16-thread CPU.
+- JPEGs decode at reduced scale, and RAW files use half-size demosaicing when that still reaches the target.
+- Scanning and thumbnails no longer run on the UI thread, and the list handles thousands of files.
+- HEIC, RAW, and PDF decoders load on first use. JPG output is optimized, about 3% smaller at the same quality. TIFF output is compressed.
+
+### Fixed
+
+- Same-named files from different folders overwrote each other when replacing existing files was on.
+- A batch could overwrite one of its own source files, such as `x.png` saved as `x.jpg` over a queued `x.jpg`.
+- A failed save could destroy the existing file it was replacing. Saves are now atomic.
+- JPG and WEBP output dropped the color profile, so wide-gamut photos looked washed out.
+- GIF and palette PNG images were resized with jagged nearest-neighbor sampling.
+- CMYK images could not be saved as PNG.
+- 16-bit grayscale images came out blank white when converted to JPG.
+- Transparent images saved as BMP showed the hidden color under transparent pixels instead of white.
+- A short, wide size box rendered PDF pages far larger than needed, which could exhaust memory. PDF renders now have a size limit.
+- A drop during the PDF picker could open a second picker.
+- Closing the window during a batch could leave a partial file. It now asks, and finishes the files in progress.
+- A superscript digit in the settings file crashed the app at launch, and settings are now saved atomically.
+
 ## 2026.10.20.1 — 2026-10-20
 
 - Show the current file and a progress bar while a batch runs, and let the user cancel after the current photo finishes.
@@ -65,4 +107,4 @@
 
 ## Versioning
 
-QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.10.20.1` is the first release on October 20, 2026.
+QuickResize uses `YYYY.MM.DD.counter` versioning. The first three components identify the release date and the final component is the daily release counter. `2026.11.03.1` is the first release on November 3, 2026.

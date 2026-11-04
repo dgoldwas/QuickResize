@@ -1,5 +1,5 @@
-Pillow>=10.0
+Pillow>=10.1
 pillow-heif>=0.16
-tkinterdnd2>=0.4
+PySide6-Essentials>=6.8
 rawpy>=0.19
 pymupdf>=1.24

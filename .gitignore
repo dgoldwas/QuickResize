@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 build/
 *.spec
+!QuickResize.spec
+.pytest_cache/
 .venv/
 dist/*
 !dist/.gitkeep

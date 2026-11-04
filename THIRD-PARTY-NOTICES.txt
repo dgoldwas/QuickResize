@@ -1,0 +1,13 @@
+QuickResize includes these open source components, unmodified. Each remains under
+its own license, as published by its authors.
+
+Qt for Python (PySide6, Shiboken6)  LGPL-3.0     https://www.qt.io/qt-for-python
+    Qt source: https://code.qt.io
+PyMuPDF / MuPDF                     AGPL-3.0     https://github.com/pymupdf/PyMuPDF
+Pillow                              MIT-CMU      https://github.com/python-pillow/Pillow
+pillow-heif                         BSD-3-Clause https://github.com/bigcat88/pillow_heif
+    Includes libheif and libde265 (LGPL-3.0) and x265 (GPL-2.0)
+rawpy                               MIT          https://github.com/letmaik/rawpy
+    Includes LibRaw (LGPL-2.1 or CDDL-1.0)
+NumPy                               BSD-3-Clause https://github.com/numpy/numpy
+Python                              PSF-2.0      https://www.python.org
