@@ -108,7 +108,7 @@ def is_installed() -> bool:
 
 def installed_exe() -> Path:
     program_files = os.environ.get("ProgramW6432") or os.environ.get("ProgramFiles") or r"C:\Program Files"
-    return Path(program_files) / APP_NAME / f"{APP_NAME}.exe"
+    return Path(program_files) / "WarmButter" / APP_NAME / f"{APP_NAME}.exe"
 
 
 def work_folder() -> Path:

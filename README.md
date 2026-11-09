@@ -1,4 +1,4 @@
-# QuickResize v2026.11.09.1
+# QuickResize v2026.11.09.2
 
 QuickResize is a lightweight Windows desktop batch converter for photos, camera RAW files, PDFs, and Photoshop documents. It resizes each input to fit inside a maximum width and height while preserving the original aspect ratio, then saves the result in a chosen output format.
 
@@ -10,7 +10,7 @@ Get one from [Releases](https://github.com/dgoldwas/QuickResize/releases). All t
 | --- | --- | --- | --- |
 | **Best for** | Everyday use on your own PC | One file that is easy to carry | Faster starts, no install |
 | **To run** | Run setup, then open QuickResize from the Start menu | Open it | Unzip it, then open `QuickResize.exe` inside the folder |
-| **Installs to** | `C:\Program Files\QuickResize` | Nowhere | Nowhere |
+| **Installs to** | `C:\Program Files\WarmButter\QuickResize` | Nowhere | Nowhere |
 | **Updates** | Installs new versions itself | Download the new version | Download the new version |
 | **Settings** | `%APPDATA%\QuickResize\settings.json` | `settings.json` beside the EXE | `settings.json` beside the EXE |
 | **Starts in** | About 1.5 seconds | About 2.7 seconds | About 1.5 seconds |
@@ -92,7 +92,7 @@ py -m pytest tests
 
 ## Release versioning
 
-The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.11.09.1`, is the first release on November 9, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.11.09.2`, is the second release on November 9, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 

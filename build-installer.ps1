@@ -1,4 +1,4 @@
-# Builds dist\QuickResize-<version>-Setup.exe, which installs into C:\Program Files\QuickResize.
+# Builds dist\QuickResize-<version>-Setup.exe, which installs into C:\Program Files\WarmButter\QuickResize.
 #   ./build-installer.ps1             build all release files (runs build.ps1 first)
 #   ./build-installer.ps1 -Install    also install the new Setup.exe on this PC
 #   ./build-installer.ps1 -Release    also publish GitHub release v<version>, which installed copies offer as an update
@@ -31,7 +31,7 @@ if ($Install) {
   # Setup elevates through UAC and closes a running QuickResize itself.
   $process = Start-Process -FilePath $setup -ArgumentList '/SILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CLOSEAPPLICATIONS' -Verb RunAs -Wait -PassThru
   if ($process.ExitCode -ne 0) { throw "Setup exited with code $($process.ExitCode)." }
-  $installed = Join-Path $env:ProgramFiles 'QuickResize\QuickResize.exe'
+  $installed = Join-Path $env:ProgramFiles 'WarmButter\QuickResize\QuickResize.exe'
   if (!(Test-Path -LiteralPath $installed)) { throw "Setup finished but $installed is missing." }
   Write-Host "Installed QuickResize $version to $(Split-Path $installed)."
 }

@@ -15,7 +15,7 @@ VersionInfoVersion={#AppVersion}
 AppPublisher=QuickResize
 AppPublisherURL=https://github.com/dgoldwas/QuickResize
 AppUpdatesURL=https://github.com/dgoldwas/QuickResize/releases
-DefaultDirName={autopf}\QuickResize
+DefaultDirName={autopf}\WarmButter\QuickResize
 UsePreviousAppDir=no
 DisableDirPage=yes
 DefaultGroupName=QuickResize
@@ -38,6 +38,8 @@ RestartApplications=no
 [InstallDelete]
 ; Replace the whole runtime on update rather than mixing files from two builds.
 Type: filesandordirs; Name: "{app}\_internal"
+; Remove the copy installed by earlier versions, which used Program Files\QuickResize.
+Type: filesandordirs; Name: "{autopf}\QuickResize"
 
 [Files]
 ; The portable notes and any settings from testing the folder build stay out of the installed copy.

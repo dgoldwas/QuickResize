@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026.11.09.2 — 2026-11-09
+
+### Installer
+
+- Setup now installs into `C:\Program Files\WarmButter\QuickResize`, like the other WarmButter apps. Updating from an earlier release moves the install and removes the old `Program Files\QuickResize` folder. Settings in `%APPDATA%\QuickResize` are kept.
+
 ## 2026.11.09.1 — 2026-11-09
 
 ### Installer
