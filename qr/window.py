@@ -46,6 +46,7 @@ from .core import (
 from .pdf_picker import PdfPagePicker
 from .settings import Settings, load_settings, save_settings
 from .thumbnails import ThumbnailService
+from .update_ui import UpdateController
 from .widgets import (
     DropOverlay,
     ElidedLabel,
@@ -126,6 +127,9 @@ class MainWindow(QMainWindow):
         self._connect_settings()
         self._add_shortcuts()
         self._refresh()
+        # Only packaged builds check on their own, so tests and source runs stay offline.
+        self.updater = UpdateController(self, self.update_button, automatic=getattr(sys, "frozen", False))
+        self.updater.report_last_result()
 
         restored = bool(self.settings.geometry) and self.restoreGeometry(QByteArray.fromHex(self.settings.geometry.encode()))
         if not restored:
@@ -159,6 +163,8 @@ class MainWindow(QMainWindow):
         top.addWidget(label(APP_NAME, "title"))
         version = label(f"v{APP_VERSION}", "version")
         top.addWidget(version)
+        self.update_button = button("Check for updates", "ghost")
+        top.addWidget(self.update_button)
         top.addStretch(1)
         self.top_add_files = button("Add files", icon_name="plus", tooltip="Add files (Ctrl+O)")
         self.top_add_files.clicked.connect(self.choose_files)
@@ -996,9 +1002,11 @@ class MainWindow(QMainWindow):
                 self.hide()  # The window goes now; the process exits when the workers finish.
             return
         self.save_now()
+        self.updater.shutdown()
         self.thumbnails.shutdown()
         close_pdf_cache()
         event.accept()
+        self.updater.launch_pending()
         if self._close_after_run:
             QApplication.quit()
 

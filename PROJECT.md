@@ -8,7 +8,9 @@ QuickResize provides a focused Windows workflow for reducing or converting many 
 
 - `quickresize.py` is the entry point. It creates the application and shows the window.
 - `qr/core.py` is the image pipeline: finding inputs, naming outputs, decoding, resizing, and saving. It has no UI dependency.
-- `qr/settings.py` reads and writes the settings: `settings.json` beside the EXE when packaged, or `%APPDATA%\QuickResize\settings.json` from source.
+- `qr/settings.py` reads and writes the settings: `settings.json` beside a portable EXE, or `%APPDATA%\QuickResize\settings.json` for an installed copy or from source. A copy counts as installed when Inno Setup's `unins000.exe` sits beside the EXE.
+- `qr/updates.py` asks GitHub for the latest release, downloads and verifies its `-Setup.exe`, and starts a hidden PowerShell helper that waits for the app to exit, runs setup through UAC, and reopens the app. `qr/update_ui.py` drives the Check for updates button. They use Python's `ssl` and `urllib`, so `ssl` must stay in the build.
+- `installer/QuickResize.iss` is the Inno Setup script. It installs the portable folder build into Program Files. Never change its `AppId`.
 - `qr/window.py` is the main window, and owns the queue and batch state.
 - `qr/widgets.py` holds the reusable controls and the virtualized file list. `qr/pdf_picker.py` is the page picker.
 - `qr/thumbnails.py` loads previews on background threads, newest request first, with a bounded cache.
@@ -41,14 +43,13 @@ py -m pytest tests
 ./build.ps1
 ```
 
-The build creates `dist\QuickResize.exe`, the `dist\QuickResize` folder, and `dist\QuickResize-<version>-portable.zip`. Both forms must keep running with nothing installed, and write only `settings.json` beside the EXE and the chosen output folder. The single file also uses a temporary folder that it removes on exit. The tests run without showing a window. They do not cover a real RAW file or a native drag from File Explorer, so a practical smoke test should also cover a RAW file when a sample is available, a drag from Explorer, and a window on a scaled display.
+The build creates `dist\QuickResize.exe`, the `dist\QuickResize` folder, and `dist\QuickResize-<version>-portable.zip`. `./build-installer.ps1` also creates `dist\QuickResize-<version>-Setup.exe`. The portable forms must keep running with nothing installed, and write only `settings.json` beside the EXE and the chosen output folder. The single file also uses a temporary folder that it removes on exit. The tests run without showing a window. They do not cover a real RAW file or a native drag from File Explorer, so a practical smoke test should also cover a RAW file when a sample is available, a drag from Explorer, and a window on a scaled display.
 
 ## Release checklist
 
 - Update `VERSION`, `APP_VERSION` in `qr/__init__.py`, `CHANGELOG.md`, and this documentation.
 - Run the tests and the smoke test above.
-- Build both release forms.
+- Run `./build-installer.ps1 -Install` to build all three downloads and install the Setup.exe, then confirm the installed copy opens.
 - Inspect `git status` and stage only intended project files.
 - Commit with the release version in the message.
-- Push the release branch and create the GitHub release tag `v2026.11.03.2`.
-- Attach `dist\QuickResize.exe`, `dist\QuickResize-<version>-portable.zip`, and `THIRD-PARTY-NOTICES.txt` to the GitHub release.
+- Push `main` to GitHub, then run `./build-installer.ps1 -Release`. It creates release `v<version>` at the built commit with the Setup.exe, `QuickResize.exe`, the portable zip, and `THIRD-PARTY-NOTICES.txt`. Installed copies only see releases that include the Setup.exe.

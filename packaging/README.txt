@@ -8,7 +8,9 @@ Keep the _internal folder next to QuickResize.exe. The app cannot start without 
 Your settings are saved in settings.json in this folder, so they travel with it. If
 this folder is read-only, settings last only until you close the app.
 
-To update: unzip a newer version over this folder. Your settings are kept.
+To update: unzip a newer version over this folder. Your settings are kept. Check for
+updates in the app tells you when there is one. To have updates install themselves,
+use QuickResize-<version>-Setup.exe instead.
 To remove: delete this folder.
 
 Windows may warn about an unrecognized app the first time, because this build is not

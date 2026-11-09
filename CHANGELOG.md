@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026.11.09.1 — 2026-11-09
+
+### Installer
+
+- New `QuickResize-<version>-Setup.exe` installs QuickResize into `C:\Program Files\QuickResize`, with a Start menu entry, an optional desktop shortcut, and an uninstaller. It asks for administrator permission.
+- An installed copy keeps its settings in `%APPDATA%\QuickResize`, because Program Files is not writable. Uninstalling keeps them.
+- The single EXE and the portable zip are unchanged, and still keep settings beside the EXE.
+
+### Check for updates
+
+- A **Check for updates** button sits beside the version number. Packaged copies also check GitHub quietly at startup and every six hours, and the button changes to **Update to …** when a newer release is out.
+- An installed copy downloads the new Setup.exe, verifies it against GitHub's SHA-256, closes, installs through a Windows permission prompt, and opens again. The next launch says whether the update installed.
+- A portable copy opens the release page instead, since it cannot replace itself.
+- Updating waits for a running batch to finish or be canceled.
+- `build-installer.ps1` builds the Setup.exe along with the other two downloads. `-Install` installs it on this PC, and `-Release` publishes all three to GitHub.
+
 ## 2026.11.03.2 — 2026-11-03
 
 - Added a portable folder download alongside the single EXE. It starts faster, and never unpacks to the temporary folder.

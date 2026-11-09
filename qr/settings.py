@@ -1,24 +1,25 @@
 """Reading and writing the remembered preferences.
 
-The packaged app is portable: its settings live beside the EXE, so they travel
-with it. Running from source uses %APPDATA% instead, so a checkout stays clean. If
-the EXE's folder is read-only, settings last for the session only.
+A portable copy keeps its settings beside the EXE, so they travel with it. An
+installed copy (Program Files is not writable) and a run from source use
+%APPDATA%/QuickResize instead. If a portable copy's folder is read-only, settings
+last for the session only.
 """
 
 from __future__ import annotations
 
 import json
 import os
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 from .core import FORMAT_INFO, MAX_DIMENSION
+from .updates import app_folder, is_installed
 
 
 def portable_folder() -> Path | None:
-    """Return the folder holding the packaged EXE, or None when running from source."""
-    return Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else None
+    """Return the folder holding a portable EXE, or None when installed or running from source."""
+    return None if is_installed() else app_folder()
 
 
 def settings_path() -> Path:

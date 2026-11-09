@@ -1,20 +1,25 @@
-# QuickResize v2026.11.03.2
+# QuickResize v2026.11.09.1
 
 QuickResize is a lightweight Windows desktop batch converter for photos, camera RAW files, PDFs, and Photoshop documents. It resizes each input to fit inside a maximum width and height while preserving the original aspect ratio, then saves the result in a chosen output format.
 
 ## Download
 
-Get either one from [Releases](https://github.com/dgoldwas/QuickResize/releases). They are the same app, with nothing to install, and both run from any folder or USB drive on 64-bit Windows 10 or later.
+Get one from [Releases](https://github.com/dgoldwas/QuickResize/releases). All three are the same app, for 64-bit Windows 10 or later.
 
-| | `QuickResize.exe` | `QuickResize-<version>-portable.zip` |
-| --- | --- | --- |
-| **Best for** | One file that is easy to carry | Faster starts |
-| **To run** | Open it | Unzip it, then open `QuickResize.exe` inside the folder |
-| **Starts in** | About 2.7 seconds | About 1.5 seconds |
-| **Size on disk** | 63 MB | 163 MB |
-| **While running** | Unpacks to a temporary folder, removed when it closes | Unpacks nothing |
+| | `QuickResize-<version>-Setup.exe` | `QuickResize.exe` | `QuickResize-<version>-portable.zip` |
+| --- | --- | --- | --- |
+| **Best for** | Everyday use on your own PC | One file that is easy to carry | Faster starts, no install |
+| **To run** | Run setup, then open QuickResize from the Start menu | Open it | Unzip it, then open `QuickResize.exe` inside the folder |
+| **Installs to** | `C:\Program Files\QuickResize` | Nowhere | Nowhere |
+| **Updates** | Installs new versions itself | Download the new version | Download the new version |
+| **Settings** | `%APPDATA%\QuickResize\settings.json` | `settings.json` beside the EXE | `settings.json` beside the EXE |
+| **Starts in** | About 1.5 seconds | About 2.7 seconds | About 1.5 seconds |
 
-Your settings are saved in `settings.json` beside the EXE, so they travel with it. To remove the app, delete the EXE and `settings.json`, or the whole folder.
+To remove the installed copy, uninstall it from Settings > Apps. To remove a portable copy, delete the EXE and `settings.json`, or the whole folder.
+
+### Updates
+
+The **Check for updates** button beside the version number asks GitHub for the latest release. Packaged copies also check quietly at startup and every six hours, and the button changes to **Update to …** when one is out. An installed copy then downloads the new Setup.exe, checks it against GitHub's SHA-256, closes, installs after a Windows permission prompt, and opens again. A portable copy opens the release page.
 
 Because the app is not code-signed, Windows may warn about an unrecognized app the first time. Choose More info, then Run anyway.
 
@@ -74,17 +79,20 @@ py -m pip install -r requirements-dev.txt
 py -m pytest tests
 ```
 
-## Build a standalone EXE
+## Build
 
 ```powershell
-./build.ps1
+./build.ps1             # dist\QuickResize.exe and the portable folder and zip
+./build-installer.ps1   # all of the above, plus dist\QuickResize-<version>-Setup.exe
 ```
 
-This runs the tests in a private `.venv`, then creates `dist\QuickResize.exe`, the `dist\QuickResize` folder, and its archive `dist\QuickResize-<version>-portable.zip`. The build recipe, including what is left out to keep them small, is in `QuickResize.spec`.
+`build.ps1` runs the tests in a private `.venv`, then creates `dist\QuickResize.exe`, the `dist\QuickResize` folder, and its archive `dist\QuickResize-<version>-portable.zip`. The build recipe, including what is left out to keep them small, is in `QuickResize.spec`.
+
+`build-installer.ps1` also packs the folder into an installer with [Inno Setup 6](https://jrsoftware.org/isinfo.php) (`winget install JRSoftware.InnoSetup --scope user`), from `installer\QuickResize.iss`. Add `-Install` to install it on this PC, or `-Release` to publish GitHub release `v<version>` with all three downloads. Installed copies only offer releases that include a `-Setup.exe`.
 
 ## Release versioning
 
-The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.11.03.2`, is the second release on November 3, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.11.09.1`, is the first release on November 9, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 

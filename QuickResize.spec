@@ -25,7 +25,6 @@ EXCLUDED_MODULES = [
     "tkinter",
     "unittest",
     "pydoc",
-    "ssl",
     "PIL._avif",
     "PIL.AvifImagePlugin",
     "PIL.ImageQt",
@@ -39,7 +38,8 @@ EXCLUDED_MODULES = [
 ]
 
 # Qt files the app has no use for: it draws with the raster engine, uses the
-# built-in Fusion style, makes no network calls, and only loads a .ico through Qt.
+# built-in Fusion style, and only loads a .ico through Qt. Update checks use
+# Python's ssl and urllib, which bring their own OpenSSL DLLs, not Qt's network stack.
 EXCLUDED_BINARIES = (
     "opengl32sw.dll",
     "d3dcompiler_",
@@ -53,8 +53,6 @@ EXCLUDED_BINARIES = (
     "qminimal",
     "qoffscreen",
     "qmodernwindowsstyle",
-    "libcrypto",
-    "libssl",
 )
 UNUSED_PLUGIN_FOLDERS = ("/plugins/tls/", "/plugins/networkinformation/", "/plugins/generic/", "/plugins/iconengines/")
 

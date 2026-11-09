@@ -477,9 +477,21 @@ def portable(tmp_path, monkeypatch):
 
 def test_portable_settings_sit_beside_the_exe(monkeypatch, tmp_path):
     exe = tmp_path / "App" / "QuickResize.exe"
-    monkeypatch.setattr(settings_module.sys, "frozen", True, raising=False)
-    monkeypatch.setattr(settings_module.sys, "executable", str(exe))
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(exe))
     assert settings_module.settings_path() == tmp_path.resolve() / "App" / "settings.json"
+
+
+def test_installed_copy_keeps_settings_in_appdata(monkeypatch, tmp_path):
+    # Setup leaves its uninstaller beside the EXE, and Program Files is not writable.
+    folder = tmp_path / "Program Files" / "QuickResize"
+    folder.mkdir(parents=True)
+    (folder / "unins000.exe").write_bytes(b"")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(folder / "QuickResize.exe"))
+    monkeypatch.setenv("APPDATA", str(tmp_path / "Roaming"))
+    assert settings_module.portable_folder() is None
+    assert settings_module.settings_path() == tmp_path / "Roaming" / "QuickResize" / "settings.json"
 
 
 def test_source_runs_keep_using_appdata(monkeypatch, tmp_path):
