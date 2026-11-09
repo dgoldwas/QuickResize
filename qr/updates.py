@@ -227,7 +227,8 @@ def launch_installer_after_exit(setup: Path, version: str) -> None:
             "-ProcessId", str(os.getpid()), "-Setup", str(setup), "-Version", version,
             "-Installed", str(installed_exe()), "-Current", current, "-Result", str(result_path()),
         ],
-        creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS,
+        # Not DETACHED_PROCESS: PowerShell started without a console exits at once, before running anything.
+        creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP,
         close_fds=True,
     )
 

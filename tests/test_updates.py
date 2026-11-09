@@ -87,3 +87,15 @@ def test_last_result_is_read_once(monkeypatch, tmp_path):
     (tmp_path / "last-result.txt").write_text("installed 2026.12.01.1\n", encoding="utf-8-sig")
     assert updates.take_last_result() == "installed 2026.12.01.1"
     assert updates.take_last_result() is None
+
+
+def test_helper_is_not_started_detached(monkeypatch, tmp_path):
+    import subprocess
+
+    # PowerShell started without a console exits at once, so the update would never install.
+    seen = {}
+    monkeypatch.setattr(updates, "work_folder", lambda: tmp_path)
+    monkeypatch.setattr(subprocess, "Popen", lambda args, **kwargs: seen.update(kwargs))
+    updates.launch_installer_after_exit(tmp_path / "Setup.exe", "2026.12.01.1")
+    assert not seen["creationflags"] & subprocess.DETACHED_PROCESS
+    assert seen["creationflags"] & subprocess.CREATE_NO_WINDOW

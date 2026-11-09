@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026.11.09.3 — 2026-11-09
+
+### Fixed
+
+- Check for updates now installs the update. The app quit after downloading, but the helper that runs Setup exited immediately and nothing was installed. Anyone on an earlier release needs to run this release's Setup.exe once by hand; updates work from then on.
+
 ## 2026.11.09.2 — 2026-11-09
 
 ### Installer
