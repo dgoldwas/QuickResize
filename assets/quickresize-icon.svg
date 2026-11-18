@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>QuickResize</title>
+  <rect x="32" y="32" width="960" height="960" rx="224" fill="#0D0F13"/>
+  <g transform="translate(510 518) scale(1.24) translate(-510 -518)">
+    <rect x="224" y="232" width="584" height="560" rx="56" fill="none" stroke="#596170" stroke-width="48"/>
+    <path d="M716 304 628 392M628 292V392H728" fill="none" stroke="#A7AFBD" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="200" y="452" width="372" height="364" rx="56" fill="#F5C451" stroke="#0D0F13" stroke-width="24"/>
+    <circle cx="474" cy="556" r="34" fill="#0D0F13"/>
+    <path d="M248 732 340 628 404 688 444 652 528 732Z" fill="#0D0F13"/>
+  </g>
+</svg>
