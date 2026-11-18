@@ -64,6 +64,7 @@ from .widgets import (
 )
 
 PRESETS = (1920, 1600, 1080, 800)
+SCAN_INSERT_CHUNK = 500
 FORMAT_NOTES = {
     "JPG": "Best for photos. Transparent areas become white.",
     "PNG": "Lossless and keeps transparency. Larger files.",
@@ -548,8 +549,9 @@ class MainWindow(QMainWindow):
         locked = self.is_running or self.is_scanning
         for control in (self.top_add_files, self.top_add_folder, self.empty_add_files, self.empty_add_folder, self.clear_button):
             control.setEnabled(not locked)
+        self.retry_button.setEnabled(not locked and not blocker)
         self.settings_area.setEnabled(not self.is_running)
-        self.delegate.locked = self.is_running
+        self.delegate.locked = locked
 
     def _describe_output(self, box: tuple[int, int] | None) -> str:
         if not box:
@@ -558,7 +560,7 @@ class MainWindow(QMainWindow):
 
     def _sync_selection(self) -> None:
         rows = self.file_list.selected_rows()
-        has = bool(rows) and not self.is_running
+        has = bool(rows) and not (self.is_running or self.is_scanning)
         for control in (self.up_button, self.down_button, self.remove_button):
             control.setVisible(has)
         self.up_button.setEnabled(has and rows[0] > 0)
@@ -645,40 +647,61 @@ class MainWindow(QMainWindow):
         threading.Thread(target=lambda: self.bridge.scanned.emit(collect_inputs(paths)), name="scan", daemon=True).start()
 
     def _on_scanned(self, result: ScanResult) -> None:
-        self.is_scanning = False
-        known = {path_key(entry.path): entry for entry in self.entries.values()}
+        if not self.is_scanning:
+            return
         added = duplicates = 0
         pdfs = []
-        for scanned in result.files:
-            key = path_key(scanned.path)
-            if scanned.path.suffix.lower() == ".pdf":
-                pdfs.append(scanned)
-            elif key in known:
-                duplicates += 1
-            else:
-                known[key] = self._append_entry(scanned.path, scanned.size)
-                added += 1
+        offset = 0
 
-        # Show what was added right away, behind any PDF page picker.
-        self._refresh()
-        updated = cancelled = 0
-        for position, scanned in enumerate(pdfs, start=1):
-            existing = known.get(path_key(scanned.path))
-            pages, page_count = self._pick_pages(scanned.path, existing.pages if existing else None, (position, len(pdfs)))
-            if not pages:
-                cancelled += 1
-            elif existing is not None:
-                existing.pages, existing.page_count = pages, page_count
-                self._reset_status(existing)
-                updated += 1
+        def add_chunk() -> None:
+            nonlocal offset, added, duplicates
+            if not self.is_scanning:
+                return
+            end = min(offset + SCAN_INSERT_CHUNK, len(result.files))
+            for scanned in result.files[offset:end]:
+                if scanned.path.suffix.lower() == ".pdf":
+                    pdfs.append(scanned)
+                elif self._rows_by_key.get(path_key(scanned.path)):
+                    duplicates += 1
+                else:
+                    self._append_entry(scanned.path, scanned.size)
+                    added += 1
+            if offset == 0 and end < len(result.files):
+                self._refresh()
+            offset = end
+            if offset < len(result.files):
+                QTimer.singleShot(0, self, add_chunk)
             else:
-                entry = self._append_entry(scanned.path, scanned.size)
-                entry.pages, entry.page_count = pages, page_count
-                known[path_key(scanned.path)] = entry
-                added += 1
-        close_pdf_cache()
-        self._say(summarize_add(added, updated, duplicates, result.unsupported, result.decoder_skips, cancelled))
-        self._refresh()
+                finish()
+
+        def finish() -> None:
+            nonlocal added
+            # Show what was added right away, behind any PDF page picker.
+            updated = cancelled = 0
+            if pdfs:
+                self._refresh()
+                for position, scanned in enumerate(pdfs, start=1):
+                    ids = self._rows_by_key.get(path_key(scanned.path))
+                    existing = self.entries[ids[0]] if ids else None
+                    pages, page_count = self._pick_pages(scanned.path, existing.pages if existing else None, (position, len(pdfs)))
+                    if not self.is_scanning:
+                        return
+                    if not pages:
+                        cancelled += 1
+                    elif existing is not None:
+                        existing.pages, existing.page_count = pages, page_count
+                        self._reset_status(existing)
+                        updated += 1
+                    else:
+                        entry = self._append_entry(scanned.path, scanned.size)
+                        entry.pages, entry.page_count = pages, page_count
+                        added += 1
+                close_pdf_cache()
+            self.is_scanning = False
+            self._say(summarize_add(added, updated, duplicates, result.unsupported, result.decoder_skips, cancelled))
+            self._refresh()
+
+        add_chunk()
 
     def _append_entry(self, path: Path, size: int) -> QueueEntry:
         entry = QueueEntry(self._next_id, path, size)
@@ -701,8 +724,11 @@ class MainWindow(QMainWindow):
         self.is_picking = True
         try:
             picker = PdfPagePicker(path, page_count, self.thumbnails, initial, position, self)
-            accepted = picker.exec() == PdfPagePicker.DialogCode.Accepted
-            return (picker.selected_pages() if accepted else None), page_count
+            try:
+                accepted = picker.exec() == PdfPagePicker.DialogCode.Accepted
+                return (picker.selected_pages() if accepted else None), page_count
+            finally:
+                picker.deleteLater()
         finally:
             self.is_picking = False
 
@@ -746,7 +772,7 @@ class MainWindow(QMainWindow):
                 ids.remove(entry_id)
 
     def _remove_with_undo(self, doomed: set[int], text: str) -> None:
-        if self.is_running or not doomed:
+        if not self._can_accept_files() or not doomed:
             return
         self._snapshot()
         self._drop_entries(doomed)
@@ -775,7 +801,7 @@ class MainWindow(QMainWindow):
             self._remove_with_undo(set(self.entries), f"Cleared {count} file{'s' if count != 1 else ''}")
 
     def undo(self) -> None:
-        if self._undo is None or self.is_running:
+        if self._undo is None or not self._can_accept_files():
             return
         order, entries = self._undo
         self.file_list.blockSignals(True)
@@ -793,7 +819,7 @@ class MainWindow(QMainWindow):
 
     def move_selected(self, direction: int) -> None:
         rows = self.file_list.selected_rows()
-        if not rows or self.is_running:
+        if not rows or not self._can_accept_files():
             return
         destination = rows[0] + direction
         if destination < 0 or rows[-1] + direction >= self.file_list.count():
@@ -826,7 +852,7 @@ class MainWindow(QMainWindow):
             replace=self.exists_choice.value() == "replace",
         )
 
-    def start(self, work: list[tuple[QueueEntry, list[int] | None]]) -> None:
+    def start(self, work: list[tuple[QueueEntry, list[int] | None]], *, protected_sources: tuple[Path, ...] = ()) -> None:
         """Begin processing the given entries and, for a PDF, the given pages."""
         options = self._options()
         items = [(entry.id, entry.path, pages) for entry, pages in work]
@@ -854,9 +880,12 @@ class MainWindow(QMainWindow):
         def task() -> None:
             summary = BatchSummary()
             try:
-                jobs = plan_jobs(items, options)
-                bridge.planned.emit(len(jobs))
-                summary = run_batch(jobs, options, self._cancel, bridge.job_started.emit, bridge.job_finished.emit)
+                jobs = plan_jobs(items, options, protected_sources=protected_sources, cancel=self._cancel)
+                if self._cancel.is_set():
+                    summary.cancelled = True
+                else:
+                    bridge.planned.emit(len(jobs))
+                    summary = run_batch(jobs, options, self._cancel, bridge.job_started.emit, bridge.job_finished.emit)
             except Exception as exc:  # The window must always return to a usable state.
                 summary.errors.append(str(exc))
             bridge.batch_finished.emit(summary)
@@ -979,14 +1008,15 @@ class MainWindow(QMainWindow):
             self._say(f"Could not open folder: {exc}")
 
     def retry_failed(self) -> None:
-        if self.is_running:
+        if not self._can_accept_files() or self._output_blocker():
             return
         work = []
-        for entry in self.file_list.ordered_entries():
+        entries = self.file_list.ordered_entries()
+        for entry in entries:
             if entry.status in ("failed", "partial"):
                 work.append((entry, list(entry.failed_pages) if entry.is_pdf else None))
         if work:
-            self.start(work)
+            self.start(work, protected_sources=tuple(entry.path for entry in entries))
 
     # ---------------------------------------------------------------- closing
 
@@ -1002,6 +1032,7 @@ class MainWindow(QMainWindow):
                 self.hide()  # The window goes now; the process exits when the workers finish.
             return
         self.save_now()
+        self.is_scanning = False
         self.updater.shutdown()
         self.thumbnails.shutdown()
         close_pdf_cache()

@@ -253,7 +253,11 @@ def parse_page_range(text: str, page_count: int) -> list[int]:
     return list(chosen)
 
 
-def plan_output_path(folder: Path, source: Path, page: int | None, extension: str, replace: bool, used: set[str], protected: set[str]) -> Path:
+def plan_output_path(
+    folder: Path, source: Path, page: int | None, extension: str, replace: bool,
+    used: set[str], protected: set[str], next_suffix: dict[str, int],
+    cancel: threading.Event | None,
+) -> Path | None:
     """Choose an output path, reserving it in `used`.
 
     `protected` holds the key of every source in the batch, so an output can never
@@ -261,19 +265,24 @@ def plan_output_path(folder: Path, source: Path, page: int | None, extension: st
     share a name, even when replacing existing files is allowed.
     """
     stem = f"{source.stem}_page_{page + 1:03d}" if page is not None else source.stem
-    if path_key(folder / f"{stem}{extension}") == path_key(source):
+    base = folder / f"{stem}{extension}"
+    base_key = path_key(base)
+    if base_key == path_key(source):
         stem = f"{stem}_resized"
-    candidate = folder / f"{stem}{extension}"
-    number = 2
-    while True:
-        key = path_key(candidate)
+        base = folder / f"{stem}{extension}"
+        base_key = path_key(base)
+    number = next_suffix.get(base_key, 1)
+    while number < 100000:
+        if cancel is not None and cancel.is_set():
+            return None
+        candidate = base if number == 1 else folder / f"{stem}_{number}{extension}"
+        key = base_key if number == 1 else path_key(candidate)
+        number += 1
         if key not in used and key not in protected and (replace or not candidate.exists()):
             used.add(key)
+            next_suffix[base_key] = number
             return candidate
-        candidate = folder / f"{stem}_{number}{extension}"
-        number += 1
-        if number > 100000:
-            raise RuntimeError(f"Could not find a free name for {source.name}")
+    raise RuntimeError(f"Could not find a free name for {source.name}")
 
 
 @dataclass(frozen=True)
@@ -322,23 +331,43 @@ class BatchSummary:
     elapsed: float = 0.0
 
 
-def plan_jobs(items: Iterable[tuple[object, Path, list[int] | None]], options: ResizeOptions) -> list[Job]:
+def plan_jobs(
+    items: Iterable[tuple[object, Path, list[int] | None]],
+    options: ResizeOptions,
+    *,
+    protected_sources: Iterable[Path] = (),
+    cancel: threading.Event | None = None,
+) -> list[Job]:
     """Assign output names in list order, before any decoding starts.
 
     Naming up front keeps results deterministic while files finish out of order.
     Each item is (tag, source, pages), where pages is None for a single image.
+    Additional protected sources stay safe even when they have no job in this run.
+    A cancelled plan returns no jobs.
     """
-    listed = list(items)
-    protected = {path_key(source) for _tag, source, _pages in listed}
+    listed = []
+    protected: set[str] = set()
+    for source in protected_sources:
+        if cancel is not None and cancel.is_set():
+            return []
+        protected.add(path_key(source))
+    for item in items:
+        if cancel is not None and cancel.is_set():
+            return []
+        listed.append(item)
+        protected.add(path_key(item[1]))
     extension = FORMAT_INFO[options.fmt][1]
     used: set[str] = set()
+    next_suffix: dict[str, int] = {}
     jobs: list[Job] = []
     for tag, source, pages in listed:
         folder = options.destination if options.destination is not None else source.parent
         for page in pages if pages is not None else [None]:
-            output = plan_output_path(folder, source, page, extension, options.replace, used, protected)
+            output = plan_output_path(folder, source, page, extension, options.replace, used, protected, next_suffix, cancel)
+            if output is None:
+                return []
             jobs.append(Job(tag, source, page, output))
-    return jobs
+    return [] if cancel is not None and cancel.is_set() else jobs
 
 
 def _open_pdf(source: Path) -> Any:
@@ -561,6 +590,9 @@ def run_batch(
     and encodes, so threads scale without the packaging cost of processes."""
     started = time.perf_counter()
     summary = BatchSummary(folder=options.destination)
+    if cancel.is_set():
+        summary.cancelled = bool(jobs)
+        return summary
     if options.destination is not None:
         try:
             options.destination.mkdir(parents=True, exist_ok=True)
@@ -569,30 +601,36 @@ def run_batch(
             return summary
     Image.init()  # Load format plugins once, before threads race to do it.
     lock = threading.Lock()
+    remaining = iter(jobs)
 
-    def work(job: Job) -> None:
-        if cancel.is_set():
+    def work() -> None:
+        while True:
             with lock:
-                summary.cancelled = True
-            return
-        on_start(job)
-        result = process_job(job, options)
-        with lock:
-            if result.ok:
-                summary.saved += 1
-                summary.bytes_in += result.bytes_in
-                summary.bytes_out += result.bytes_out
-                if summary.folder is None:
-                    summary.folder = job.source.parent
-            else:
-                summary.errors.append(f"{job.label}: {result.error}")
-        on_done(result)
+                job = next(remaining, None)
+                if job is None:
+                    return
+                if cancel.is_set():
+                    summary.cancelled = True
+                    return
+            on_start(job)
+            result = process_job(job, options)
+            with lock:
+                if result.ok:
+                    summary.saved += 1
+                    summary.bytes_in += result.bytes_in
+                    summary.bytes_out += result.bytes_out
+                    if summary.folder is None:
+                        summary.folder = job.source.parent
+                else:
+                    summary.errors.append(f"{job.label}: {result.error}")
+            on_done(result)
 
     try:
-        with ThreadPoolExecutor(max_workers=workers or default_workers(), thread_name_prefix="resize") as pool:
-            # Consuming the iterator surfaces any unexpected exception from a worker.
-            for _ in pool.map(work, jobs):
-                pass
+        parallelism = workers or default_workers()
+        with ThreadPoolExecutor(max_workers=parallelism, thread_name_prefix="resize") as pool:
+            futures = [pool.submit(work) for _ in range(min(parallelism, len(jobs)))]
+            for future in futures:
+                future.result()
     finally:
         close_pdf_cache()
     summary.elapsed = time.perf_counter() - started

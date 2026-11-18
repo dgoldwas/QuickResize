@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QModelIndex, QPoint, QRect, QRectF, QSize, Qt, QTimer
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, QRect, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QKeySequence, QMouseEvent, QPainter, QPainterPath, QPen, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -112,8 +112,9 @@ class _PageGrid(QListWidget):
             return
         if event.modifiers() & Qt.KeyboardModifier.ShiftModifier and self._anchor >= 0:
             low, high = sorted((self._anchor, row))
-            for index in range(low, high + 1):
-                self.item(index).setSelected(True)
+            model = self.model()
+            selection = QItemSelection(model.index(low, 0), model.index(high, 0))
+            self.selectionModel().select(selection, QItemSelectionModel.SelectionFlag.Select)
         else:
             self.item(row).setSelected(not self.item(row).isSelected())
         self._anchor = row
@@ -126,6 +127,20 @@ class _PageGrid(QListWidget):
 
     def mouseReleaseEvent(self, _event: QMouseEvent) -> None:
         return
+
+    def set_selected_pages(self, pages: list[int]) -> None:
+        pages = sorted({page for page in pages if 0 <= page < self.count()})
+        selection = QItemSelection()
+        model = self.model()
+        if pages:
+            first = last = pages[0]
+            for page in pages[1:]:
+                if page != last + 1:
+                    selection.select(model.index(first, 0), model.index(last, 0))
+                    first = page
+                last = page
+            selection.select(model.index(first, 0), model.index(last, 0))
+        self.selectionModel().select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
 
 
 class PdfPagePicker(QDialog):
@@ -183,7 +198,6 @@ class PdfPagePicker(QDialog):
         self.grid.setGridSize(QSize(TILE_WIDTH, TILE_HEIGHT))
         for _page in range(page_count):
             self.grid.addItem(QListWidgetItem())
-        self.grid.itemSelectionChanged.connect(self._sync)
         layout.addWidget(self.grid, 1)
         layout.addSpacing(12)
 
@@ -209,9 +223,9 @@ class PdfPagePicker(QDialog):
         thumbnails.ready.connect(self._on_thumbnail)
         self._thumbnails = thumbnails
 
-        for page in initial or []:
-            if 0 <= page < page_count:
-                self.grid.item(page).setSelected(True)
+        if initial:
+            self.grid.set_selected_pages(initial)
+        self.grid.itemSelectionChanged.connect(self._sync)
         self._sync()
 
     def _on_thumbnail(self, _key: object, _thumbnail: object) -> None:
@@ -248,12 +262,7 @@ class PdfPagePicker(QDialog):
             repolish(self.range_input)
             self.range_error.setText(f"Use pages from 1 to {self.page_count}, like 1-5, 8")
             return
-        self.grid.blockSignals(True)
-        self.grid.clearSelection()
-        for page in pages:
-            self.grid.item(page).setSelected(True)
-        self.grid.blockSignals(False)
-        self._sync()
+        self.grid.set_selected_pages(pages)
         self.grid.scrollToItem(self.grid.item(min(pages)))
 
     def _clear_range_error(self) -> None:
@@ -263,7 +272,7 @@ class PdfPagePicker(QDialog):
         self.range_error.setText("")
 
     def _sync(self) -> None:
-        count = len(self.grid.selectedIndexes())
+        count = sum(span.height() for span in self.grid.selectionModel().selection())
         self.count_label.setText(f"{count} of {self.page_count} selected")
         self.accept_button.setText(f"Use {count} page{'s' if count != 1 else ''}" if count else "Select pages to continue")
         self.accept_button.setEnabled(count > 0)

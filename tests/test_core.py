@@ -300,6 +300,78 @@ def test_keep_both_numbers_around_existing_files(tmp_path):
     assert (tmp_path / "out" / "x_2.jpg").exists()
 
 
+def test_repeated_names_skip_known_collisions_and_keep_queue_order(tmp_path, monkeypatch):
+    existing = tmp_path / "photo.jpg"
+    existing.touch()
+    photo_2 = tmp_path / "photo_2.jpg"
+    items = [(0, tmp_path / "a" / "photo.png", None),
+             (1, tmp_path / "b" / "photo_2.png", None),
+             (2, tmp_path / "c" / "photo.png", None),
+             (3, tmp_path / "d" / "photo.png", None)]
+    probes = []
+    real_exists = Path.exists
+
+    def record_exists(path):
+        probes.append(path)
+        return real_exists(path)
+
+    monkeypatch.setattr(Path, "exists", record_exists)
+    jobs = plan_jobs(items, ResizeOptions(1600, 1600, destination=tmp_path))
+    assert [job.output.name for job in jobs] == ["photo_2.jpg", "photo_2_2.jpg", "photo_3.jpg", "photo_4.jpg"]
+    assert probes.count(existing) == probes.count(photo_2) == 1
+
+
+def test_cancelling_during_planning_discards_partial_plan(tmp_path, monkeypatch):
+    cancel = threading.Event()
+    probes = []
+
+    def cancel_on_probe(path):
+        probes.append(path)
+        cancel.set()
+        return False
+
+    monkeypatch.setattr(Path, "exists", cancel_on_probe)
+    source = tmp_path / "doc.pdf"
+    jobs = plan_jobs([(0, source, [0, 1, 2])], ResizeOptions(1600, 1600), cancel=cancel)
+    assert jobs == []
+    assert len(probes) == 1
+
+
+def test_pre_cancelled_batch_skips_executor(tmp_path, monkeypatch):
+    source = tmp_path / "image.png"
+    options = ResizeOptions(1600, 1600)
+    jobs = plan_jobs([(0, source, None)], options)
+    cancel = threading.Event()
+    cancel.set()
+
+    def unexpected_executor(**_kwargs):
+        pytest.fail("A cancelled batch should not start workers")
+
+    monkeypatch.setattr(core, "ThreadPoolExecutor", unexpected_executor)
+    summary = run_batch(jobs, options, cancel)
+    assert summary.cancelled and summary.saved == 0
+
+
+def test_large_batch_submits_one_task_per_worker_and_processes_each_job(tmp_path, monkeypatch):
+    submitted = []
+
+    class CountingExecutor(core.ThreadPoolExecutor):
+        def submit(self, fn, *args, **kwargs):
+            submitted.append(fn)
+            return super().submit(fn, *args, **kwargs)
+
+    monkeypatch.setattr(core, "ThreadPoolExecutor", CountingExecutor)
+    monkeypatch.setattr(core, "process_job", lambda job, _options: core.JobResult(job, True))
+    source = tmp_path / "doc.pdf"
+    options = ResizeOptions(1600, 1600)
+    jobs = plan_jobs([(0, source, list(range(100)))], options)
+    finished = []
+
+    summary = run_batch(jobs, options, threading.Event(), on_done=lambda result: finished.append(result.job.page), workers=4)
+    assert summary.saved == 100 and sorted(finished) == list(range(100))
+    assert len(submitted) == 4
+
+
 def test_replace_mode_replaces_existing(tmp_path):
     source = tmp_path / "x.png"
     Image.new("RGB", (50, 50)).save(source)

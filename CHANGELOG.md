@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Retry failed protects all queued originals when Replace is enabled.
+- Closed PDF page pickers release their memory.
+
+### Performance
+
+- Batches with repeated filenames prepare faster. Cancel stops preparing new jobs and lets work in progress finish.
+- Large PDF selections update in one operation, and importing large folders yields to the window between groups of files.
+
 ## 2026.11.09.3 — 2026-11-09
 
 ### Fixed

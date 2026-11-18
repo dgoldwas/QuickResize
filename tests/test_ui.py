@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
-from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
+from PySide6.QtCore import QCoreApplication, QEvent, QMimeData, QPoint, QPointF, Qt, QUrl
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMessageBox
@@ -439,6 +439,38 @@ def test_failure_is_explained_on_the_row_and_can_be_retried(window, tmp_path):
     assert entry.message == "" and "\n" not in window.file_list.item(2).toolTip()
 
 
+def test_retry_in_replace_mode_preserves_other_queued_originals(window, tmp_path):
+    source = tmp_path / "photo.png"
+    source.write_bytes(b"not an image")
+    original = tmp_path / "photo.jpg"
+    Image.new("RGB", (40, 40), "blue").save(original)
+    original_bytes = original.read_bytes()
+    window.destination_choice.segment("beside").click()
+    window.exists_choice.segment("replace").click()
+    add(window, [source, original])
+    run_to_end(window)
+    assert window.retry_button.isVisible()
+
+    Image.new("RGB", (40, 40), "red").save(source)
+    window.retry_button.click()
+    wait(lambda: not window.is_running)
+    assert window.result_title.text() == "Saved 1 image"
+    assert original.read_bytes() == original_bytes
+    assert (tmp_path / "photo_2.jpg").is_file()
+
+
+def test_large_scan_inserts_in_chunks_in_order(window, tmp_path):
+    files = [core.ScannedFile(tmp_path / f"photo{i}.jpg", 1) for i in range(1500)]
+    window.is_scanning = True
+    window._on_scanned(core.ScanResult(files=files))
+    assert window.is_scanning
+    assert 0 < window.file_list.count() < len(files)
+    assert not window.resize_button.isEnabled()
+    wait(lambda: not window.is_scanning)
+    assert names(window) == [item.path.name for item in files]
+    assert window.resize_button.isEnabled()
+
+
 def test_unusable_destination_returns_to_ready(window, tmp_path):
     add(window, images(tmp_path / "s", 1))
     blocker = tmp_path / "file"
@@ -511,8 +543,11 @@ def test_picker_click_toggles_and_shift_selects_a_run(picker):
     click_page(picker, 1)
     assert picker.selected_pages() == []
     click_page(picker, 1)
+    changes = []
+    picker.grid.itemSelectionChanged.connect(lambda: changes.append(True))
     click_page(picker, 4, Qt.KeyboardModifier.ShiftModifier)
     assert picker.selected_pages() == [1, 2, 3, 4] and picker.accept_button.text() == "Use 4 pages"
+    assert changes == [True]
 
 
 def test_picker_range_all_and_clear(picker):
@@ -570,6 +605,8 @@ def test_cancelled_pdf_is_skipped_with_a_note(window, pdf, monkeypatch):
     monkeypatch.setattr(PdfPagePicker, "exec", lambda self: PdfPagePicker.DialogCode.Rejected)
     add(window, [pdf])
     assert window.file_list.count() == 0 and "no pages selected" in window.message_label.text()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    assert window.findChildren(PdfPagePicker) == []
 
 
 def test_unreadable_pdf_is_reported(window, tmp_path, monkeypatch):
