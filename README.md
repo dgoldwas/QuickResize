@@ -1,4 +1,4 @@
-# QuickResize v2026.11.17.1
+# QuickResize v2026.11.17.2
 
 QuickResize is a lightweight Windows desktop batch converter for photos, camera RAW files, PDFs, and Photoshop documents. It resizes each input to fit inside a maximum width and height while preserving the original aspect ratio, then saves the result in a chosen output format.
 
@@ -95,7 +95,7 @@ py -m pytest tests
 
 ## Release versioning
 
-The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.11.17.1`, is the first release on November 17, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.11.17.2`, is the second release on November 17, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
