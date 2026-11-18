@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026.11.17.3 — 2026-11-17
+
+### Appearance
+
+- New app icon in the style of FrameGrabber and VideoTrimmer: a butter photo card on a dark tile, with an arrow shrinking a larger frame down to it.
+
 ## 2026.11.17.2 — 2026-11-17
 
 ### Appearance
