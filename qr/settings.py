@@ -13,6 +13,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import theme
 from .core import FORMAT_INFO, MAX_DIMENSION
 from .updates import app_folder, is_installed
 
@@ -44,6 +45,8 @@ class Settings:
     save_beside: bool = False
     replace: bool = False
     geometry: str = ""
+    theme_mode: str = theme.DEFAULT_MODE
+    accent: str = theme.DEFAULT_ACCENT
 
 
 def _store_destination(destination: str) -> str | None:
@@ -114,6 +117,9 @@ def load_settings(path: Path | None = None) -> Settings:
     geometry = raw.get("geometry")
     # Earlier versions stored "next to each source" as a value of the collision rule.
     collision = raw.get("collision")
+    mode = raw.get("theme")
+    if "theme" not in raw and raw.get("dark_mode") is False:
+        mode = "Light"
     return Settings(
         width=_dimension(raw.get("width"), "1600"),
         height=_dimension(raw.get("height"), "1600"),
@@ -123,6 +129,8 @@ def load_settings(path: Path | None = None) -> Settings:
         save_beside=raw.get("save_beside") is True or collision == "beside",
         replace=collision == "overwrite",
         geometry=geometry if isinstance(geometry, str) else "",
+        theme_mode=theme.mode_name(mode),
+        accent=theme.accent_name(raw.get("accent")),
     )
 
 
@@ -136,6 +144,8 @@ def save_settings(settings: Settings, path: Path | None = None) -> None:
         collision="overwrite" if settings.replace else "unique",
         save_beside=settings.save_beside,
         geometry=settings.geometry,
+        theme=settings.theme_mode,
+        accent=settings.accent,
     )
     # An unfinished entry in a field should not erase the last good value.
     for key, value in (("width", settings.width), ("height", settings.height)):

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from PySide6.QtCore import QPoint, QRect, QRectF, QSize, Qt, Signal
+from PySide6.QtCore import QEvent, QPoint, QRect, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QDragEnterEvent, QDragMoveEvent, QDropEvent, QFontMetrics, QIcon, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPen, QWheelEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -42,13 +43,27 @@ def label(text: str = "", role: str | None = None, wrap: bool = False) -> QLabel
     return widget
 
 
-def button(text: str = "", kind: str | None = None, icon_name: str | None = None, color: str = theme.TEXT, tooltip: str = "") -> QPushButton:
+class _IconButton(QPushButton):
+    def __init__(self, text: str, name: str, color_role: str):
+        super().__init__(text)
+        self._name = name
+        self._color_role = color_role
+        self._update_icon()
+
+    def _update_icon(self) -> None:
+        self.setIcon(theme.icon(self._name, getattr(theme.colors, self._color_role)))
+
+    def changeEvent(self, event: QEvent) -> None:
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.PaletteChange:
+            self._update_icon()
+
+
+def button(text: str = "", kind: str | None = None, icon_name: str | None = None, color_role: str = "TEXT", tooltip: str = "") -> QPushButton:
     # Qt leaves no gap between a button's icon and its text.
-    widget = QPushButton(f" {text}" if text and icon_name else text)
+    widget = _IconButton(f" {text}" if text else "", icon_name, color_role) if icon_name else QPushButton(text)
     if kind:
         widget.setProperty("kind", kind)
-    if icon_name:
-        widget.setIcon(theme.icon(icon_name, color))
     if tooltip:
         widget.setToolTip(tooltip)
         widget.setAccessibleName(tooltip)
@@ -83,13 +98,13 @@ class ElidedLabel(QLabel):
 class IconLabel(QWidget):
     """Draws an icon at paint time, so it stays sharp at any display scale."""
 
-    def __init__(self, icon: QIcon, side: int, parent: QWidget | None = None):
+    def __init__(self, icon: Callable[[], QIcon], side: int, parent: QWidget | None = None):
         super().__init__(parent)
         self._icon = icon
         self.setFixedSize(side, side)
 
     def paintEvent(self, _event: QPaintEvent) -> None:
-        self._icon.paint(QPainter(self), self.rect())
+        self._icon().paint(QPainter(self), self.rect())
 
 
 class Segmented(QWidget):
@@ -97,7 +112,7 @@ class Segmented(QWidget):
 
     changed = Signal(str)
 
-    def __init__(self, options: list[tuple[str, str]], parent: QWidget | None = None):
+    def __init__(self, options: list[tuple[str, str]], parent: QWidget | None = None, *, icons: dict[str, str] | None = None):
         super().__init__(parent)
         self.setObjectName("Segmented")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
@@ -108,7 +123,7 @@ class Segmented(QWidget):
         self._group.setExclusive(True)
         self._buttons: dict[str, QPushButton] = {}
         for value, text in options:
-            segment = button(text, "segment")
+            segment = button(text, "segment", icon_name=icons.get(value) if icons else None)
             segment.setCheckable(True)
             self._group.addButton(segment)
             self._buttons[value] = segment
@@ -145,7 +160,7 @@ class EmptyState(QWidget):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         layout = QVBoxLayout(self)
         layout.addStretch(5)
-        layout.addWidget(IconLabel(theme.icon("upload", theme.ACCENT_TEXT, size=44), 44), 0, Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(IconLabel(lambda: theme.icon("upload", theme.colors.ACCENT_TEXT, size=44), 44), 0, Qt.AlignmentFlag.AlignHCenter)
         layout.addSpacing(14)
         headline = label("Drop photos, folders, or PDFs", "headline")
         headline.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -172,8 +187,8 @@ class EmptyState(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         hovered = self.underMouse()
-        painter.setBrush(theme.with_alpha(theme.SURFACE, 150 if hovered else 90))
-        pen = QPen(QColor(theme.ACCENT_TEXT if hovered else theme.BORDER_STRONG), 1.4, Qt.PenStyle.DashLine)
+        painter.setBrush(theme.with_alpha(theme.colors.SURFACE, 150 if hovered else 90))
+        pen = QPen(QColor(theme.colors.ACCENT_TEXT if hovered else theme.colors.BORDER_STRONG), 1.4, Qt.PenStyle.DashLine)
         pen.setDashPattern([5, 4])
         painter.setPen(pen)
         painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 16, 16)
@@ -200,16 +215,16 @@ class DropOverlay(QWidget):
     def paintEvent(self, _event: QPaintEvent) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.fillRect(self.rect(), theme.with_alpha(theme.BG, 215))
+        painter.fillRect(self.rect(), theme.with_alpha(theme.colors.BG, 215))
         area = QRectF(self.rect()).adjusted(14, 14, -14, -14)
-        pen = QPen(QColor(theme.ACCENT_TEXT), 2, Qt.PenStyle.DashLine)
+        pen = QPen(QColor(theme.colors.ACCENT_TEXT), 2, Qt.PenStyle.DashLine)
         pen.setDashPattern([6, 4])
         painter.setPen(pen)
-        painter.setBrush(theme.with_alpha(theme.ACCENT, 34))
+        painter.setBrush(theme.with_alpha(theme.colors.ACCENT, 34))
         painter.drawRoundedRect(area, 18, 18)
         centre = self.rect().center()
-        theme.icon("upload", theme.ACCENT_TEXT, size=52).paint(painter, QRect(centre - QPoint(26, 62), QSize(52, 52)))
-        painter.setPen(QColor(theme.TEXT))
+        theme.icon("upload", theme.colors.ACCENT_TEXT, size=52).paint(painter, QRect(centre - QPoint(26, 62), QSize(52, 52)))
+        painter.setPen(QColor(theme.colors.TEXT))
         painter.setFont(theme.ui_font(16, theme.QFont.Weight.DemiBold, display=True))
         painter.drawText(QRect(0, centre.y() + 2, self.width(), 40), Qt.AlignmentFlag.AlignCenter, "Drop to add")
 
@@ -238,11 +253,11 @@ class QueueEntry:
 
 
 _PILLS = {
-    "waiting": ("Waiting", theme.FAINT),
-    "working": ("Working", theme.ACCENT_TEXT),
-    "done": ("Done", theme.SUCCESS),
-    "failed": ("Failed", theme.DANGER),
-    "partial": ("Partial", theme.WARNING),
+    "waiting": ("Waiting", "FAINT"),
+    "working": ("Working", "ACCENT_TEXT"),
+    "done": ("Done", "SUCCESS"),
+    "failed": ("Failed", "DANGER"),
+    "partial": ("Partial", "WARNING"),
 }
 
 
@@ -300,8 +315,8 @@ class FileDelegate(QStyledItemDelegate):
         focused = bool(option.state & QStyle.StateFlag.State_HasFocus) and bool(option.state & QStyle.StateFlag.State_KeyboardFocusChange)
 
         if selected or hovered or focused:
-            painter.setPen(QPen(theme.with_alpha(theme.ACCENT_TEXT, 120 if selected or focused else 0), 1))
-            painter.setBrush(theme.with_alpha(theme.ACCENT, 46) if selected else QColor(theme.SURFACE))
+            painter.setPen(QPen(theme.with_alpha(theme.colors.ACCENT_TEXT, 120 if selected or focused else 0), 1))
+            painter.setBrush(theme.with_alpha(theme.colors.ACCENT, 46) if selected else QColor(theme.colors.SURFACE))
             painter.drawRoundedRect(QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5), 10, 10)
 
         tile = QRect(rect.left() + 8, rect.center().y() - 21, 44, 44)
@@ -321,7 +336,7 @@ class FileDelegate(QStyledItemDelegate):
         text_left = tile.right() + 12
         text_width = max(right - text_left, 20)
         painter.setFont(self._name_font)
-        painter.setPen(QColor(theme.TEXT))
+        painter.setPen(QColor(theme.colors.TEXT))
         name_metrics = QFontMetrics(self._name_font)
         painter.drawText(QRect(text_left, rect.top() + 11, text_width, 20), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, name_metrics.elidedText(entry.path.name, Qt.TextElideMode.ElideMiddle, text_width))
 
@@ -330,18 +345,18 @@ class FileDelegate(QStyledItemDelegate):
         meta_rect = QRect(text_left, rect.top() + 31, text_width, 18)
         alignment = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         if entry.message and entry.status in ("failed", "partial"):
-            painter.setPen(QColor(theme.DANGER if entry.status == "failed" else theme.WARNING))
+            painter.setPen(QColor(theme.colors.DANGER if entry.status == "failed" else theme.colors.WARNING))
             painter.drawText(meta_rect, alignment, metrics.elidedText(entry.message, Qt.TextElideMode.ElideRight, text_width))
         else:
             detail = self.describe(entry)
-            painter.setPen(QColor(theme.MUTED))
+            painter.setPen(QColor(theme.colors.MUTED))
             detail = metrics.elidedText(detail, Qt.TextElideMode.ElideRight, text_width)
             painter.drawText(meta_rect, alignment, detail)
             used = metrics.horizontalAdvance(detail) + 18
             room = text_width - used
             if room > 70:
                 # Same-named files from different folders are told apart here.
-                painter.setPen(QColor(theme.FAINT))
+                painter.setPen(QColor(theme.colors.FAINT))
                 folder = metrics.elidedText(str(entry.path.parent), Qt.TextElideMode.ElideMiddle, room)
                 painter.drawText(QRect(text_left + used, meta_rect.top(), room, meta_rect.height()), alignment, folder)
         painter.restore()
@@ -349,13 +364,13 @@ class FileDelegate(QStyledItemDelegate):
     def _paint_thumbnail(self, painter: QPainter, tile: QRect, entry: QueueEntry) -> None:
         clip = QPainterPath()
         clip.addRoundedRect(QRectF(tile), 8, 8)
-        painter.fillPath(clip, QColor(theme.SURFACE_HOVER))
+        painter.fillPath(clip, QColor(theme.colors.SURFACE_HOVER))
         key = entry.thumb_key()
         pixmap = self.thumbnails.pixmap(key)
         if pixmap is None:
             page = entry.pages[0] if entry.pages else (0 if entry.is_pdf else None)
             self.thumbnails.request(key, entry.path, page, THUMB_SIDE)
-            theme.icon("file" if entry.is_pdf else "image", theme.FAINT, size=20).paint(painter, QRect(tile.center() - QPoint(10, 10), QSize(20, 20)))
+            theme.icon("file" if entry.is_pdf else "image", theme.colors.FAINT, size=20).paint(painter, QRect(tile.center() - QPoint(10, 10), QSize(20, 20)))
             return
         painter.save()
         painter.setClipPath(clip)
@@ -367,11 +382,12 @@ class FileDelegate(QStyledItemDelegate):
 
     def _paint_zone_icon(self, painter: QPainter, zone: QRect, name: str) -> None:
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(theme.SURFACE_HOVER))
+        painter.setBrush(QColor(theme.colors.SURFACE_HOVER))
         painter.drawRoundedRect(QRectF(zone), 7, 7)
-        theme.icon(name, theme.MUTED, size=15).paint(painter, QRect(zone.center() - QPoint(7, 7), QSize(15, 15)))
+        theme.icon(name, theme.colors.MUTED, size=15).paint(painter, QRect(zone.center() - QPoint(7, 7), QSize(15, 15)))
 
-    def _paint_pill(self, painter: QPainter, right: int, center_y: int, text: str, color: str) -> int:
+    def _paint_pill(self, painter: QPainter, right: int, center_y: int, text: str, color_role: str) -> int:
+        color = getattr(theme.colors, color_role)
         painter.setFont(self._pill_font)
         width = QFontMetrics(self._pill_font).horizontalAdvance(text) + 20
         pill = QRect(right - width, center_y - 11, width, 22)

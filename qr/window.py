@@ -8,7 +8,7 @@ import threading
 from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QObject, Qt, QTimer, Signal
-from PySide6.QtGui import QCloseEvent, QDragEnterEvent, QDropEvent, QIcon, QKeySequence, QResizeEvent, QShortcut
+from PySide6.QtGui import QCloseEvent, QDragEnterEvent, QDropEvent, QKeySequence, QResizeEvent, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -24,7 +24,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import APP_NAME, APP_VERSION, theme
+from . import APP_NAME, theme
+from .app_menu import AppMenu
 from .core import (
     IMAGE_EXTENSIONS,
     MAX_DIMENSION,
@@ -44,6 +45,7 @@ from .core import (
     summarize_add,
 )
 from .pdf_picker import PdfPagePicker
+from .preferences import PreferencesDialog
 from .settings import Settings, load_settings, save_settings
 from .thumbnails import ThumbnailService
 from .update_ui import UpdateController
@@ -53,7 +55,6 @@ from .widgets import (
     EmptyState,
     FileDelegate,
     FileList,
-    IconLabel,
     QueueEntry,
     Segmented,
     Slider,
@@ -63,7 +64,7 @@ from .widgets import (
     repolish,
 )
 
-PRESETS = (1920, 1600, 1080, 800)
+PRESETS = (3000, 1920, 1080, 900)
 SCAN_INSERT_CHUNK = 500
 FORMAT_NOTES = {
     "JPG": "Best for photos. Transparent areas become white.",
@@ -123,13 +124,15 @@ class MainWindow(QMainWindow):
         self._save_timer.setInterval(500)
         self._save_timer.timeout.connect(self.save_now)
 
+        self._set_color_scheme()
         self._build()
         self._apply_settings()
         self._connect_settings()
-        self._add_shortcuts()
+        QShortcut(QKeySequence("Escape"), self, activated=self._on_escape)
+        QApplication.styleHints().colorSchemeChanged.connect(self._system_appearance_changed, Qt.ConnectionType.QueuedConnection)
         self._refresh()
         # Only packaged builds check on their own, so tests and source runs stay offline.
-        self.updater = UpdateController(self, self.update_button, automatic=getattr(sys, "frozen", False))
+        self.updater = UpdateController(self, self.menu.update_action, automatic=getattr(sys, "frozen", False))
         self.updater.report_last_result()
 
         restored = bool(self.settings.geometry) and self.restoreGeometry(QByteArray.fromHex(self.settings.geometry.encode()))
@@ -140,6 +143,8 @@ class MainWindow(QMainWindow):
     # ---------------------------------------------------------------- construction
 
     def _build(self) -> None:
+        self.menu = AppMenu(self)
+        self.setMenuBar(self.menu)
         root = QWidget()
         root.setObjectName("Workspace")
         root.setFocusPolicy(Qt.FocusPolicy.ClickFocus)  # Clicking empty space leaves a text field.
@@ -160,12 +165,6 @@ class MainWindow(QMainWindow):
 
         top = QHBoxLayout()
         top.setSpacing(8)
-        top.addWidget(IconLabel(QIcon(str(asset_path("QuickResize.ico"))), 24))
-        top.addWidget(label(APP_NAME, "title"))
-        version = label(f"v{APP_VERSION}", "version")
-        top.addWidget(version)
-        self.update_button = button("Check for updates", "ghost")
-        top.addWidget(self.update_button)
         top.addStretch(1)
         self.top_add_files = button("Add files", icon_name="plus", tooltip="Add files (Ctrl+O)")
         self.top_add_files.clicked.connect(self.choose_files)
@@ -176,7 +175,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(top)
 
         self.stack = QStackedWidget()
-        self.empty_add_files = button("Browse files", "primary", "plus", "#FFFFFF")
+        self.empty_add_files = button("Browse files", "primary", "plus", "ON_ACCENT")
         self.empty_add_files.clicked.connect(self.choose_files)
         self.empty_add_folder = button("Add folder", icon_name="folder")
         self.empty_add_folder.setMinimumHeight(38)
@@ -201,13 +200,13 @@ class MainWindow(QMainWindow):
         self.selection_label = label("", "message")
         header.addWidget(self.selection_label)
         header.addSpacing(4)
-        self.up_button = button("", "ghost", "up", theme.MUTED, "Move up (Alt+Up)")
+        self.up_button = button("", "ghost", "up", "MUTED", "Move up (Alt+Up)")
         self.up_button.clicked.connect(lambda: self.move_selected(-1))
         header.addWidget(self.up_button)
-        self.down_button = button("", "ghost", "down", theme.MUTED, "Move down (Alt+Down)")
+        self.down_button = button("", "ghost", "down", "MUTED", "Move down (Alt+Down)")
         self.down_button.clicked.connect(lambda: self.move_selected(1))
         header.addWidget(self.down_button)
-        self.remove_button = button("Remove", "ghost", "trash", theme.MUTED, "Remove selected (Delete)")
+        self.remove_button = button("Remove", "ghost", "trash", "MUTED", "Remove selected (Delete)")
         self.remove_button.clicked.connect(self.remove_selected)
         header.addWidget(self.remove_button)
         self.clear_button = button("Clear all", "ghost")
@@ -370,7 +369,7 @@ class MainWindow(QMainWindow):
         title_row = QHBoxLayout()
         self.result_title = label("", "resultTitle")
         title_row.addWidget(self.result_title, 1)
-        self.result_close = button("", "ghost", "close", theme.MUTED, "Dismiss")
+        self.result_close = button("", "ghost", "close", "MUTED", "Dismiss")
         self.result_close.clicked.connect(self._dismiss_result)
         title_row.addWidget(self.result_close, 0, Qt.AlignmentFlag.AlignTop)
         card.addLayout(title_row)
@@ -408,16 +407,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.resize_button)
         return area
 
-    def _add_shortcuts(self) -> None:
-        for sequence, action in (
-            (QKeySequence.StandardKey.Open, self.choose_files),
-            ("Ctrl+Shift+O", self.choose_folder),
-            (QKeySequence.StandardKey.Undo, self.undo),
-            ("Ctrl+Return", self.start_or_cancel),
-        ):
-            QShortcut(QKeySequence(sequence), self, activated=action)
-        QShortcut(QKeySequence("Escape"), self, activated=self._on_escape)
-
     def _apply_settings(self) -> None:
         settings = self.settings
         self.width_input.setText(settings.width)
@@ -438,6 +427,37 @@ class MainWindow(QMainWindow):
         self.quality_slider.valueChanged.connect(self._on_setting_changed)
 
     # ---------------------------------------------------------------- settings
+
+    def show_preferences(self) -> None:
+        dialog = PreferencesDialog(self.settings.theme_mode, self.settings.accent, self)
+        dialog.changed.connect(self._change_appearance)
+        try:
+            dialog.exec()
+        finally:
+            dialog.deleteLater()
+
+    def _change_appearance(self, mode: str, accent: str) -> None:
+        if (mode, accent) == (self.settings.theme_mode, self.settings.accent):
+            return
+        self.settings.theme_mode, self.settings.accent = mode, accent
+        self._set_color_scheme()
+        self.save_now()
+
+    def _set_color_scheme(self) -> None:
+        scheme = getattr(Qt.ColorScheme, self.settings.theme_mode, Qt.ColorScheme.Unknown)
+        QApplication.styleHints().setColorScheme(scheme)
+        self._apply_appearance()
+
+    def _system_appearance_changed(self) -> None:
+        if self.settings.theme_mode == "System" and self.isVisible():
+            self._apply_appearance()
+
+    def _apply_appearance(self) -> None:
+        scheme = QApplication.styleHints().colorScheme()
+        dark = self.settings.theme_mode == "Dark" or (
+            self.settings.theme_mode == "System" and scheme != Qt.ColorScheme.Light
+        )
+        theme.apply(dark, self.settings.accent)
 
     def _on_setting_changed(self, *_args: object) -> None:
         self._refresh()
@@ -468,6 +488,8 @@ class MainWindow(QMainWindow):
             save_beside=self.destination_choice.value() == "beside",
             replace=self.exists_choice.value() == "replace",
             geometry=bytes(self.saveGeometry().toHex().data()).decode(),
+            theme_mode=self.settings.theme_mode,
+            accent=self.settings.accent,
         )
 
     def save_now(self) -> None:
@@ -552,6 +574,13 @@ class MainWindow(QMainWindow):
         self.retry_button.setEnabled(not locked and not blocker)
         self.settings_area.setEnabled(not self.is_running)
         self.delegate.locked = locked
+        self.menu.add_files.setEnabled(not locked)
+        self.menu.add_folder.setEnabled(not locked)
+        self.menu.output_folder.setEnabled(not locked and not beside)
+        self.menu.clear.setEnabled(has_files and not locked)
+        self.menu.undo.setEnabled(self._undo is not None and not locked)
+        self.menu.resize_batch.setEnabled(self.resize_button.isEnabled())
+        self.menu.resize_batch.setText("&Cancel batch" if self.is_running else "&Resize files")
 
     def _describe_output(self, box: tuple[int, int] | None) -> str:
         if not box:
@@ -565,6 +594,11 @@ class MainWindow(QMainWindow):
             control.setVisible(has)
         self.up_button.setEnabled(has and rows[0] > 0)
         self.down_button.setEnabled(has and rows[-1] < self.file_list.count() - 1)
+        self.menu.remove.setEnabled(has)
+        self.menu.up.setEnabled(self.up_button.isEnabled())
+        self.menu.down.setEnabled(self.down_button.isEnabled())
+        entry = self.file_list.entry_at(rows[0]) if has and len(rows) == 1 else None
+        self.menu.pages.setEnabled(entry is not None and entry.is_pdf)
         self.selection_label.setVisible(len(rows) > 1 and not self.is_running)
         self.selection_label.setText(f"{len(rows)} selected")
         self.clear_button.setVisible(not has and self.file_list.count() > 0)
@@ -574,6 +608,7 @@ class MainWindow(QMainWindow):
         self.undo_button.setVisible(undoable)
         if not undoable:
             self._undo = None
+        self.menu.undo.setEnabled(undoable and self._can_accept_files())
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -744,6 +779,13 @@ class MainWindow(QMainWindow):
             self._say(f"Updated pages for {entry.path.name}")
             self._refresh()
             self.file_list.viewport().update()
+
+    def edit_selected_pdf(self) -> None:
+        rows = self.file_list.selected_rows()
+        if len(rows) == 1:
+            entry = self.file_list.entry_at(rows[0])
+            if entry is not None and entry.is_pdf:
+                self._edit_pages(entry.id)
 
     def _reset_status(self, entry: QueueEntry) -> None:
         entry.status, entry.message, entry.bytes_out = "", "", 0

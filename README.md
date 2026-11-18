@@ -19,7 +19,7 @@ To remove the installed copy, uninstall it from Settings > Apps. To remove a por
 
 ### Updates
 
-The **Check for updates** button beside the version number asks GitHub for the latest release. Packaged copies also check quietly at startup and every six hours, and the button changes to **Update to …** when one is out. An installed copy then downloads the new Setup.exe, checks it against GitHub's SHA-256, closes, installs after a Windows permission prompt, and opens again. A portable copy opens the release page.
+**Help → Check for updates** asks GitHub for the latest release. Packaged copies also check quietly at startup and every six hours, and the menu item changes to **Update to …** when one is out. An installed copy then downloads the new Setup.exe, checks it against GitHub's SHA-256, closes, installs after a Windows permission prompt, and opens again. A portable copy opens the release page.
 
 Because the app is not code-signed, Windows may warn about an unrecognized app the first time. Choose More info, then Run anyway.
 
@@ -35,6 +35,7 @@ Because the app is not code-signed, Windows may warn about an unrecognized app t
 - Originals are never overwritten, and an interrupted save never damages an existing file.
 - Color profiles are kept, so wide-gamut photos such as iPhone HEIC keep their color.
 - Size, format, quality, destination, and window size are remembered between sessions.
+- **Edit → Settings** applies and remembers the theme and accent. System follows Windows' app mode. The default is Dark with Butter, and the other accents are Graphite, Sky, Mint, Rose, Violet, and Coral.
 - PDF page picker with thumbnails. Pages start unselected. Click to toggle, Shift+click for a run, or enter a range. Pages can be changed later from the list.
 - HEIC/HEIF through `pillow-heif`, Canon CRW/CR3 through `rawpy` and LibRaw, and PSD/PSB as a flattened composite.
 - PDF pages become separate images, with names like `document_page_001.png`.
@@ -52,6 +53,8 @@ Because the app is not code-signed, Windows may warn about an unrecognized app t
 | Enter | Choose pages for the selected PDF |
 | Ctrl+Enter | Start, or cancel a running batch |
 | Esc | Cancel a running batch |
+| Ctrl+, | Appearance settings |
+| F1 | Keyboard shortcuts |
 
 ## Supported inputs
 

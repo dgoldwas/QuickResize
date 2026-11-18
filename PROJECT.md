@@ -9,12 +9,13 @@ QuickResize provides a focused Windows workflow for reducing or converting many 
 - `quickresize.py` is the entry point. It creates the application and shows the window.
 - `qr/core.py` is the image pipeline: finding inputs, naming outputs, decoding, resizing, and saving. It has no UI dependency.
 - `qr/settings.py` reads and writes the settings: `settings.json` beside a portable EXE, or `%APPDATA%\QuickResize\settings.json` for an installed copy or from source. A copy counts as installed when Inno Setup's `unins000.exe` sits beside the EXE.
-- `qr/updates.py` asks GitHub for the latest release, downloads and verifies its `-Setup.exe`, and starts a hidden PowerShell helper that waits for the app to exit, runs setup through UAC, and reopens the app. `qr/update_ui.py` drives the Check for updates button. They use Python's `ssl` and `urllib`, so `ssl` must stay in the build.
+- `qr/updates.py` asks GitHub for the latest release, downloads and verifies its `-Setup.exe`, and starts a hidden PowerShell helper that waits for the app to exit, runs setup through UAC, and reopens the app. `qr/update_ui.py` drives Check for updates in the Help menu. They use Python's `ssl` and `urllib`, so `ssl` must stay in the build.
 - `installer/QuickResize.iss` is the Inno Setup script. It installs the portable folder build into Program Files. Never change its `AppId`.
 - `qr/window.py` is the main window, and owns the queue and batch state.
 - `qr/widgets.py` holds the reusable controls and the virtualized file list. `qr/pdf_picker.py` is the page picker.
 - `qr/thumbnails.py` loads previews on background threads, newest request first, with a bounded cache.
-- `qr/theme.py` holds the colors, stylesheet, and icons.
+- `qr/app_menu.py` owns the File, Edit, and Help menus. `qr/preferences.py` supplies the appearance dialog.
+- `qr/theme.py` holds the shared Warm Butter accent colors, the live Qt palette and stylesheet, and the icons.
 - PySide6 (Qt) provides the interface. Only `PySide6-Essentials` is needed.
 - Pillow handles standard raster images and Photoshop composites.
 - `pillow-heif`, `rawpy`/LibRaw, and PyMuPDF are imported on first use, because they cost more startup time than everything else combined.

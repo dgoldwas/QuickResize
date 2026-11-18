@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from pathlib import Path
@@ -11,10 +12,11 @@ from PIL import Image
 from PySide6.QtCore import QCoreApplication, QEvent, QMimeData, QPoint, QPointF, Qt, QUrl
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
-from qr import core, settings as settings_module
+from qr import core, settings as settings_module, theme
 from qr.pdf_picker import PdfPagePicker
+from qr.preferences import PreferencesDialog
 from qr.settings import Settings, load_settings
 from qr.window import MainWindow
 
@@ -128,13 +130,14 @@ def test_destination_ignored_when_saving_beside_originals(window, tmp_path):
 
 
 def test_presets_set_both_sizes_and_highlight(window):
-    chip = window.preset_buttons[800]
+    assert tuple(window.preset_buttons) == (3000, 1920, 1080, 900)
+    chip = window.preset_buttons[900]
     chip.click()
-    assert window.width_input.text() == window.height_input.text() == "800"
-    assert chip.isChecked() and not window.preset_buttons[1600].isChecked()
+    assert window.width_input.text() == window.height_input.text() == "900"
+    assert chip.isChecked() and not window.preset_buttons[3000].isChecked()
     chip.click()  # Clicking the active chip leaves it active.
     assert chip.isChecked()
-    window.width_input.setText("801")
+    window.width_input.setText("901")
     assert not chip.isChecked()
 
 
@@ -173,8 +176,8 @@ def test_thumbnail_fills_in_dimensions_and_shows_target_size(window, tmp_path):
     entry = window.file_list.ordered_entries()[0]
     wait(lambda: entry.dimensions == (3000, 2000))
     assert "3000 \u00d7 2000 \u2192 1600 \u00d7 1067" in window.delegate.describe(entry)
-    window.preset_buttons[800].click()
-    assert "\u2192 800 \u00d7 533" in window.delegate.describe(entry)
+    window.preset_buttons[900].click()
+    assert "\u2192 900 \u00d7 600" in window.delegate.describe(entry)
     window.preset_buttons[1920].click()
     window.width_input.setText("5000")
     window.height_input.setText("5000")
@@ -620,6 +623,81 @@ def test_unreadable_pdf_is_reported(window, tmp_path, monkeypatch):
 
 
 # --- Persistence ------------------------------------------------------------------------
+
+
+def test_appearance_is_backward_compatible_and_validates_saved_choices(tmp_path):
+    path = tmp_path / "settings.json"
+    path.write_text(json.dumps({"theme": "sepia", "accent": 17, "quality": 84}))
+    settings = load_settings(path)
+    assert (settings.theme_mode, settings.accent, settings.quality) == ("Dark", "Butter", 84)
+    path.write_text(json.dumps({"theme": "light", "accent": "sKy"}))
+    settings = load_settings(path)
+    assert (settings.theme_mode, settings.accent) == ("Light", "Sky")
+    path.write_text(json.dumps({"dark_mode": False}))
+    assert load_settings(path).theme_mode == "Light"
+
+
+def test_ctrl_comma_applies_and_saves_appearance_while_dialog_is_open(window, settings_file, monkeypatch):
+    seen = []
+
+    def use_settings(dialog):
+        dialog.show()
+        assert dialog.mode.value() == "Dark" and dialog.accent() == "Butter"
+        old_icon = window.empty_add_files.icon().cacheKey()
+        QTest.mouseClick(dialog.mode.segment("Light"), Qt.MouseButton.LeftButton)
+        QTest.mouseClick(dialog.accents["Graphite"], Qt.MouseButton.LeftButton)
+        saved = load_settings(settings_file)
+        seen.append((saved.theme_mode, saved.accent))
+        assert theme.colors.BG == theme.LIGHT.BG
+        assert theme.colors.ACCENT == theme.ACCENTS["Graphite"].light
+        assert theme.colors.ON_ACCENT == "#FFFFFF"
+        assert window.empty_add_files.icon().cacheKey() != old_icon
+        dialog.accept()
+        return dialog.result()
+
+    monkeypatch.setattr(PreferencesDialog, "exec", use_settings)
+    window.activateWindow()
+    wait(window.isActiveWindow)
+    QTest.keyClick(window, Qt.Key.Key_Comma, Qt.KeyboardModifier.ControlModifier)
+    assert seen == [("Light", "Graphite")]
+
+
+def test_file_and_edit_menu_actions_share_queue_commands(window, tmp_path, monkeypatch):
+    path = images(tmp_path / "s", 1)[0]
+    monkeypatch.setattr(QFileDialog, "getOpenFileNames", lambda *args: ([str(path)], ""))
+    assert not window.menu.resize_batch.isEnabled()
+    window.activateWindow()
+    wait(window.isActiveWindow)
+    QTest.keyClick(window, Qt.Key.Key_O, Qt.KeyboardModifier.ControlModifier)
+    wait(lambda: not window.is_scanning)
+    assert names(window) == [path.name] and window.menu.resize_batch.isEnabled()
+    assert not window.menu.remove.isEnabled()
+    window.file_list.setCurrentRow(0)
+    assert window.menu.remove.isEnabled()
+    window.menu.remove.trigger()
+    assert names(window) == [] and window.menu.undo.isEnabled()
+    window.menu.undo.trigger()
+    assert names(window) == [path.name] and not window.menu.undo.isEnabled()
+
+
+def test_system_theme_follows_qt_color_scheme_notifications(window, monkeypatch):
+    hints = QApplication.styleHints()
+    scheme = Qt.ColorScheme.Light
+    monkeypatch.setattr(type(hints), "colorScheme", lambda _self: scheme)
+    window._change_appearance("System", "Violet")
+    assert theme.colors.BG == theme.LIGHT.BG
+    assert theme.colors.ACCENT == theme.ACCENTS["Violet"].light
+    scheme = Qt.ColorScheme.Dark
+    hints.colorSchemeChanged.emit(scheme)
+    wait(lambda: theme.colors.BG == theme.DARK.BG)
+    assert theme.colors.ACCENT == theme.ACCENTS["Violet"].dark
+
+
+def test_help_update_action_routes_to_the_existing_update_check(window, monkeypatch):
+    requests = []
+    monkeypatch.setattr(window.updater, "check", lambda manual: requests.append(manual))
+    window.menu.update_action.trigger()
+    assert requests == [True]
 
 
 def test_settings_persist_across_sessions(app, tmp_path, settings_file):

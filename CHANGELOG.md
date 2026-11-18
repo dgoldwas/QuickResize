@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Appearance
+
+- File, Edit, and Help menus group queue commands, settings, keyboard shortcuts, updates, and version information.
+- Edit → Settings switches between System, Light, and Dark and offers the seven accents shared by FrameGrabber and VideoTrimmer. Changes apply and save immediately.
+- Fit inside presets are now 3000, 1920, 1080, and 900 pixels.
+
 ## 2026.11.17.1 — 2026-11-17
 
 ### Fixed

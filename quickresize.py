@@ -9,7 +9,6 @@ from __future__ import annotations
 import ctypes
 import sys
 
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
@@ -22,9 +21,7 @@ def create_application(argv: list[str]) -> QApplication:
     app.setApplicationName(APP_NAME)
     app.setApplicationVersion(APP_VERSION)
     app.setStyle("Fusion")
-    app.styleHints().setColorScheme(Qt.ColorScheme.Dark)  # Also darkens the title bar.
     app.setFont(theme.ui_font(10))
-    app.setStyleSheet(theme.STYLESHEET)
     app.setWindowIcon(QIcon(str(asset_path("QuickResize.ico"))))
     return app
 

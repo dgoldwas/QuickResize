@@ -1,4 +1,4 @@
-"""The window's Check for updates button: checks at startup and every six hours, and installs on request."""
+"""The Help menu's update action checks at startup and every six hours, and installs on request."""
 
 from __future__ import annotations
 
@@ -7,11 +7,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QTimer, QUrl, Signal
-from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QMessageBox, QPushButton
+from PySide6.QtGui import QAction, QDesktopServices
+from PySide6.QtWidgets import QMessageBox
 
 from . import APP_NAME, APP_VERSION, updates
-from .widgets import repolish
 
 if TYPE_CHECKING:
     from .window import MainWindow
@@ -28,10 +27,10 @@ class UpdateController(QObject):
     _downloaded = Signal(object)
     _download_failed = Signal(str)
 
-    def __init__(self, window: MainWindow, button: QPushButton, automatic: bool):
+    def __init__(self, window: MainWindow, action: QAction, automatic: bool):
         super().__init__(window)
         self.window = window
-        self.button = button
+        self.action = action
         self.available: updates.AvailableUpdate | None = None
         self.pending_setup: Path | None = None
         self.busy = False
@@ -42,7 +41,7 @@ class UpdateController(QObject):
         self._progress.connect(self._on_progress)
         self._downloaded.connect(self._on_downloaded)
         self._download_failed.connect(self._on_download_failed)
-        button.clicked.connect(self.on_click)
+        action.triggered.connect(self.on_click)
 
         self._timer = QTimer(self)
         self._timer.setInterval(CHECK_INTERVAL_MS)
@@ -56,22 +55,18 @@ class UpdateController(QObject):
     # ---------------------------------------------------------------- state
 
     def show_state(self) -> None:
-        button = self.button
-        button.setEnabled(True)
+        action = self.action
+        action.setEnabled(True)
         if self.available is not None:
-            button.setText(f"Update to {self.available.version}")
-            button.setProperty("kind", "link")
-            button.setToolTip(f"{APP_NAME} {self.available.version} is available (you have {APP_VERSION}). Click to install it.")
+            action.setText(f"Update to {self.available.version}")
+            action.setToolTip(f"{APP_NAME} {self.available.version} is available (you have {APP_VERSION}).")
         else:
-            button.setText("Check for updates")
-            button.setProperty("kind", "ghost")
-            button.setToolTip(f"{APP_NAME} {APP_VERSION}: check for updates")
-        button.setAccessibleName(button.text())
-        repolish(button)
+            action.setText("Check for updates")
+            action.setToolTip(f"{APP_NAME} {APP_VERSION}: check for updates")
 
     def _show_busy(self, text: str) -> None:
-        self.button.setText(text)
-        self.button.setEnabled(False)
+        self.action.setText(text)
+        self.action.setEnabled(False)
 
     def report_last_result(self) -> None:
         """Say how the update that closed the previous session went."""
@@ -80,7 +75,7 @@ class UpdateController(QObject):
             return
         if result.lower().startswith("failed"):
             detail = result.split(":", 1)[1].strip() if ":" in result else result
-            self.window._say(f"The last update didn't install ({detail}). Click Check for updates to try again.")
+            self.window._say(f"The last update didn't install ({detail}). Try Help → Check for updates.")
         elif result.lower().startswith("installed"):
             self.window._say(f"Updated to {APP_NAME} {APP_VERSION}.")
 
@@ -190,7 +185,7 @@ class UpdateController(QObject):
 
     def _on_progress(self, fraction: float) -> None:
         if self.busy:
-            self.button.setText(f"Downloading… {fraction:.0%}")
+            self.action.setText(f"Downloading… {fraction:.0%}")
 
     def _on_download_failed(self, message: str) -> None:
         self.busy = False
@@ -202,9 +197,9 @@ class UpdateController(QObject):
         self.pending_setup = path
         if self.window.is_running:
             # A batch started during the download. Install when the user is ready.
-            self.button.setText("Install update")
-            self.button.setEnabled(True)
-            self.window._say("The update is ready. Click Install update when the batch is done.")
+            self.action.setText("Install update")
+            self.action.setEnabled(True)
+            self.window._say("The update is ready. Choose Help → Install update when the batch is done.")
             return
         self._install_now()
 

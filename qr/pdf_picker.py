@@ -49,8 +49,8 @@ class _PageDelegate(QStyledItemDelegate):
         hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
         focused = bool(option.state & QStyle.StateFlag.State_HasFocus) and bool(option.state & QStyle.StateFlag.State_KeyboardFocusChange)
         tile = QRectF(option.rect).adjusted(5, 5, -5, -5)
-        painter.setPen(QPen(QColor(theme.ACCENT_TEXT if selected or focused else theme.BORDER_STRONG if hovered else theme.BORDER), 2 if selected else 1))
-        painter.setBrush(theme.with_alpha(theme.ACCENT, 40) if selected else QColor(theme.SURFACE))
+        painter.setPen(QPen(QColor(theme.colors.ACCENT_TEXT if selected or focused else theme.colors.BORDER_STRONG if hovered else theme.colors.BORDER), 2 if selected else 1))
+        painter.setBrush(theme.with_alpha(theme.colors.ACCENT, 40) if selected else QColor(theme.colors.SURFACE))
         painter.drawRoundedRect(tile, 10, 10)
 
         preview = tile.adjusted(9, 9, -9, -30).toRect()
@@ -59,7 +59,7 @@ class _PageDelegate(QStyledItemDelegate):
         if pixmap is None:
             self.thumbnails.request(key, self.path, page, PREVIEW_SIDE)
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(QColor(theme.SURFACE_HOVER))
+            painter.setBrush(QColor(theme.colors.SURFACE_HOVER))
             painter.drawRoundedRect(QRectF(preview), 4, 4)
         else:
             scaled = pixmap.size().scaled(preview.size(), Qt.AspectRatioMode.KeepAspectRatio)
@@ -72,18 +72,18 @@ class _PageDelegate(QStyledItemDelegate):
             painter.setClipping(False)
 
         painter.setFont(theme.ui_font(9, theme.QFont.Weight.DemiBold if selected else theme.QFont.Weight.Normal))
-        painter.setPen(QColor(theme.TEXT if selected else theme.MUTED))
+        painter.setPen(QColor(theme.colors.TEXT if selected else theme.colors.MUTED))
         painter.drawText(tile.adjusted(0, 0, 0, -8).toRect(), Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom, f"Page {page + 1}")
 
         badge = QRectF(tile.right() - 30, tile.top() + 8, 22, 22)
         if selected:
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(QColor(theme.ACCENT))
+            painter.setBrush(QColor(theme.colors.ACCENT))
             painter.drawEllipse(badge)
-            theme.icon("check", "#FFFFFF", size=14).paint(painter, QRect(badge.center().toPoint() - QPoint(7, 7), QSize(14, 14)))
+            theme.icon("check", theme.colors.ON_ACCENT, size=14).paint(painter, QRect(badge.center().toPoint() - QPoint(7, 7), QSize(14, 14)))
         elif hovered:
-            painter.setPen(QPen(QColor(theme.TEXT), 1.5))
-            painter.setBrush(theme.with_alpha(theme.BG, 170))
+            painter.setPen(QPen(QColor(theme.colors.TEXT), 1.5))
+            painter.setBrush(theme.with_alpha(theme.colors.BG, 170))
             painter.drawEllipse(badge)
         painter.restore()
 
