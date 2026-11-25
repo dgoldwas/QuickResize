@@ -4,14 +4,16 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QIcon, QLinearGradient, QPainter, QPixmap
-from PySide6.QtWidgets import QButtonGroup, QDialog, QGridLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QButtonGroup, QDialog, QGridLayout, QHBoxLayout, QVBoxLayout, QWidget
 
 from . import theme
-from .widgets import Segmented, button, label
+from .widgets import Segmented, button, label, repolish
 
 
 class PreferencesDialog(QDialog):
     changed = Signal(str, str)
+    export_requested = Signal()
+    import_requested = Signal()
 
     def __init__(self, mode: str, accent: str, parent: QWidget):
         super().__init__(parent)
@@ -56,6 +58,22 @@ class PreferencesDialog(QDialog):
 
         self.mode.changed.connect(lambda mode: self.changed.emit(mode, self.accent()))
         group.buttonClicked.connect(lambda _: self.changed.emit(self.mode.value(), self.accent()))
+        layout.addSpacing(14)
+        layout.addWidget(label("Back up", "section"))
+        transfer = QHBoxLayout()
+        transfer.setSpacing(6)
+        self.export_button = button("Export…", icon_name="download", color_role="MUTED", tooltip="Save your preferences and saved sizes to a file")
+        self.export_button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.export_button.clicked.connect(self.export_requested)
+        self.import_button = button("Import…", icon_name="upload", color_role="MUTED", tooltip="Load preferences and saved sizes from a file")
+        self.import_button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.import_button.clicked.connect(self.import_requested)
+        transfer.addWidget(self.export_button)
+        transfer.addWidget(self.import_button)
+        transfer.addStretch(1)
+        layout.addLayout(transfer)
+        self.transfer_note = label("Includes format, quality, destination, theme, and saved sizes. Importing adds only sizes you don’t have.", "caption", wrap=True)
+        layout.addWidget(self.transfer_note)
         layout.addSpacing(12)
         done = button("Done", "primary")
         done.setMinimumWidth(88)
@@ -63,6 +81,17 @@ class PreferencesDialog(QDialog):
         done.clicked.connect(self.accept)
         layout.addWidget(done, 0, Qt.AlignmentFlag.AlignRight)
         self.mode.segment(mode).setFocus()
+
+    def show_appearance(self, mode: str, accent: str) -> None:
+        """Reflect choices changed elsewhere, such as by an import."""
+        self.mode.set_value(mode)
+        if accent in self.accents:
+            self.accents[accent].setChecked(True)
+
+    def note(self, text: str, tone: str | None = None) -> None:
+        self.transfer_note.setText(text)
+        self.transfer_note.setProperty("tone", tone)
+        repolish(self.transfer_note)
 
     def accent(self) -> str:
         return next(name for name, swatch in self.accents.items() if swatch.isChecked())

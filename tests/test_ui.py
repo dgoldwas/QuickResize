@@ -651,20 +651,53 @@ def test_pdf_flow_through_the_window(window, tmp_path, pdf, monkeypatch):
     monkeypatch.setattr(PdfPagePicker, "_choice", [0, 2], raising=False)
     window.format_choice.segment("PNG").click()
     add(window, [pdf])
-    entry = window.file_list.ordered_entries()[0]
-    assert entry.pages == [0, 2] and entry.page_count == 6
+    rows = window.file_list.ordered_entries()
+    assert [entry.pages for entry in rows] == [[0], [2]] and rows[0].page_count == 6
     assert window.resize_button.text() == "Resize 2 images"
+    assert window.delegate.describe(rows[1]).startswith("PDF  \N{MIDDLE DOT}  Page 3 of 6")
+    assert window.count_label.text() == "1 file  \N{MIDDLE DOT}  2 PDF pages"
 
-    # Editing starts from the current choice and survives a second run.
+    # Editing starts from the queued pages, and a new page joins next to its neighbors.
     monkeypatch.setattr(PdfPagePicker, "_choice", [3], raising=False)
-    window.file_list.pages_requested.emit(entry.id)
-    assert seen["initial"] == [0, 2] and entry.pages == [0, 2, 3]
+    window.file_list.pages_requested.emit(rows[0].id)
+    assert seen["initial"] == [0, 2]
+    assert [entry.pages for entry in window.file_list.ordered_entries()] == [[0], [2], [3]]
     assert window.resize_button.text() == "Resize 3 images"
     run_to_end(window)
     assert sorted(p.name for p in (tmp_path / "out").iterdir()) == ["doc_page_001.png", "doc_page_003.png", "doc_page_004.png"]
-    assert entry.status == "done"
+    assert all(entry.status == "done" for entry in window.file_list.ordered_entries())
     wait(lambda: not core._pdf_document)
     pdf.unlink()  # Nothing is left holding the file open.
+
+
+def test_pdf_pages_are_separate_rows_that_can_be_removed(window, pdf, monkeypatch):
+    def choose(self):
+        self.grid.clearSelection()
+        for page in self._choice:
+            self.grid.item(page).setSelected(True)
+        return PdfPagePicker.DialogCode.Accepted
+
+    monkeypatch.setattr(PdfPagePicker, "exec", choose)
+    monkeypatch.setattr(PdfPagePicker, "_choice", [0, 1, 4], raising=False)
+    add(window, [pdf])
+    rows = window.file_list.ordered_entries()
+    window.file_list.remove_requested.emit(rows[1].id)
+    assert [entry.pages for entry in window.file_list.ordered_entries()] == [[0], [4]]
+    assert "Removed page 2 of doc.pdf" in window.message_label.text()
+    window.undo()
+    assert [entry.pages for entry in window.file_list.ordered_entries()] == [[0], [1], [4]]
+
+    # Choosing pages again drops the rows that were deselected and keeps the rest in place.
+    window.file_list.move_block([2], 0)
+    monkeypatch.setattr(PdfPagePicker, "_choice", [1, 2, 4], raising=False)
+    window.file_list.pages_requested.emit(window.file_list.ordered_entries()[0].id)
+    assert [entry.pages for entry in window.file_list.ordered_entries()] == [[4], [1], [2]]
+
+    # Adding the same PDF again changes its pages instead of duplicating them.
+    monkeypatch.setattr(PdfPagePicker, "_choice", [1, 2, 4, 5], raising=False)
+    add(window, [pdf])
+    assert [entry.pages for entry in window.file_list.ordered_entries()] == [[4], [5], [1], [2]]
+    assert "Updated 1 PDF selection" in window.message_label.text()
 
 
 def test_cancelled_pdf_is_skipped_with_a_note(window, pdf, monkeypatch):
@@ -795,3 +828,71 @@ def test_minimum_window_fits_all_primary_controls(window):
     pump()
     assert window.height() <= 600 and window.resize_button.isVisible()
     assert window.resize_button.visibleRegion().boundingRect().height() >= 30
+
+
+def test_settings_export_and_import_merge_without_duplicates(window, tmp_path, monkeypatch, settings_file):
+    exported = tmp_path / "backup.json"
+    window.format_choice.segment("PNG").click()
+    window.size_picker.set_presets([*window.size_picker.presets, settings_module.SizePreset("Blog", 1200, 800)])
+    dialog = PreferencesDialog("Dark", "Butter", window)
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *args: (str(exported), ""))
+    window.export_preferences(dialog)
+    data = json.loads(exported.read_text())
+    assert data["kind"] == "QuickResize settings" and "geometry" not in data["settings"]
+    assert data["settings"]["format"] == "PNG" and len(data["settings"]["presets"]) == 5
+
+    # Change things, then import: preferences come back, and sizes merge by dimensions.
+    data["settings"]["presets"].append({"name": "Banner", "width": 2400, "height": 600})
+    data["settings"]["presets"].append({"name": "Other name", "width": 1200, "height": 800})
+    data["settings"]["accent"] = "Sky"
+    exported.write_text(json.dumps(data))
+    window.format_choice.segment("JPG").click()
+    window.size_picker.set_presets([settings_module.SizePreset("Mine", 640, 480), settings_module.SizePreset("", 1200, 800)])
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: (str(exported), ""))
+    window.import_preferences(dialog)
+    labels = [preset.label() for preset in window.size_picker.presets]
+    assert labels == ["Mine", "1200 \N{MULTIPLICATION SIGN} 800", "Large", "Screen", "Medium", "Small", "Banner"]
+    assert window.format_choice.value() == "PNG" and window.settings.accent == "Sky" and dialog.accent() == "Sky"
+    assert "added 5 saved sizes, 2 were already saved" in dialog.transfer_note.text()
+    assert window.destination_input.text() == str(tmp_path / "out")  # The exported folder does not exist yet.
+    assert "Kept your save folder" in dialog.transfer_note.text()
+    window.import_preferences(dialog)  # Importing again adds nothing.
+    assert len(window.size_picker.presets) == 7
+    assert len(load_settings(settings_file).presets) == 7
+    window._change_appearance("Dark", "Butter")
+    dialog.deleteLater()
+
+
+def test_import_rejects_other_files(window, tmp_path, monkeypatch):
+    other = tmp_path / "other.json"
+    other.write_text(json.dumps({"hello": 1}))
+    dialog = PreferencesDialog("Dark", "Butter", window)
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: (str(other), ""))
+    before = list(window.size_picker.presets)
+    window.import_preferences(dialog)
+    assert "not QuickResize settings" in dialog.transfer_note.text() and window.size_picker.presets == before
+    other.write_text("not json")
+    window.import_preferences(dialog)
+    assert "not QuickResize settings" in dialog.transfer_note.text()
+    dialog.deleteLater()
+
+
+def test_import_uses_the_save_folder_only_when_it_exists(window, tmp_path, monkeypatch):
+    current = window.destination_input.text()
+    there = tmp_path / "Exports"
+    there.mkdir()
+    backup = tmp_path / "backup.json"
+    dialog = PreferencesDialog("Dark", "Butter", window)
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: (str(backup), ""))
+
+    backup.write_text(json.dumps({"kind": "QuickResize settings", "settings": {"destination": str(tmp_path / "Missing"), "quality": 70}}))
+    window.import_preferences(dialog)
+    assert window.destination_input.text() == current and window.quality_slider.value() == 70
+    assert "Kept your save folder" in dialog.transfer_note.text()
+
+    backup.write_text(json.dumps({"kind": "QuickResize settings", "settings": {"destination": str(there)}}))
+    window.import_preferences(dialog)
+    assert window.destination_input.text() == str(there) and "Kept" not in dialog.transfer_note.text()
+    window.save_now()
+    assert load_settings().destination == str(there)
+    dialog.deleteLater()

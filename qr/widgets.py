@@ -290,7 +290,13 @@ class FileDelegate(QStyledItemDelegate):
     def describe(self, entry: QueueEntry) -> str:
         parts = [type_label(entry.path)]
         if entry.is_pdf:
-            parts.append(format_pages(entry.pages or [], entry.page_count))
+            if entry.pages and len(entry.pages) == 1 and entry.page_count:
+                parts.append(f"Page {entry.pages[0] + 1} of {entry.page_count}")
+            else:
+                parts.append(format_pages(entry.pages or [], entry.page_count))
+            if entry.bytes_out:
+                parts.append(format_bytes(entry.bytes_out))
+            return "  ·  ".join(parts)  # Every page row shares the PDF's size, so it is not repeated.
         elif entry.dimensions:
             width, height = entry.dimensions
             if self.box:

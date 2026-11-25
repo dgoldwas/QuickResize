@@ -1,4 +1,4 @@
-# QuickResize v2026.11.25.1
+# QuickResize v2026.11.25.2
 
 QuickResize is a lightweight Windows desktop batch converter for photos, camera RAW files, PDFs, and Photoshop documents. It resizes each input to fit inside a maximum width and height while preserving the original aspect ratio, then saves the result in a chosen output format.
 
@@ -37,7 +37,8 @@ Because the app is not code-signed, Windows may warn about an unrecognized app t
 - Color profiles are kept, so wide-gamut photos such as iPhone HEIC keep their color.
 - Size, format, quality, destination, and window size are remembered between sessions.
 - **Edit → Settings** applies and remembers the theme and accent. System follows Windows' app mode. The default is Dark with Butter, and the other accents are Graphite, Sky, Mint, Rose, Violet, and Coral.
-- PDF page picker with thumbnails. Pages start unselected. Click to toggle, Shift+click for a run, or enter a range. Pages can be changed later from the list.
+- **Edit → Settings → Export** saves your preferences and saved sizes to a file, and **Import** loads them on another PC. Importing adds only the sizes you don't already have, and uses the saved folder only if it exists on that PC.
+- PDF page picker with thumbnails. Pages start unselected. Click to toggle, Shift+click for a run, or enter a range. Each chosen page is its own row in the queue, so one page can be removed without redoing the others. Pages can be changed later from the list.
 - HEIC/HEIF through `pillow-heif`, Canon CRW/CR3 through `rawpy` and LibRaw, and PSD/PSB as a flattened composite.
 - PDF pages become separate images, with names like `document_page_001.png`.
 - EXIF orientation is corrected. Other metadata is not copied to the output.
@@ -96,7 +97,7 @@ py -m pytest tests
 
 ## Release versioning
 
-The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.11.25.1`, is the first release on November 25, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The project uses `YYYY.MM.DD.counter` versioning. The first three components identify the date and the final component is the daily release counter. The current release, `2026.11.25.2`, is the second release on November 25, 2026. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 

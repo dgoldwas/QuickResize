@@ -14,6 +14,7 @@ QuickResize provides a focused Windows workflow for reducing or converting many 
 - `qr/window.py` is the main window, and owns the queue and batch state.
 - `qr/widgets.py` holds the reusable controls and the virtualized file list. `qr/pdf_picker.py` is the page picker.
 - `qr/size_presets.py` is the Fit inside dropdown. Saved sizes are picked, added, edited, and removed inline in its popup, and stored as `presets` in the settings. A missing list means the four defaults; an empty list stays empty.
+- Settings export writes a `QuickResize settings` JSON file without the window size. Import applies its values over the current ones and adds only saved sizes whose width and height are not already saved. The save folder is exported too, but an imported folder is used only if it exists on this PC; otherwise the current one stays. A plain `settings.json` imports too.
 - `qr/thumbnails.py` loads previews on background threads, newest request first, with a bounded cache.
 - `qr/app_menu.py` owns the File, Edit, and Help menus. `qr/preferences.py` supplies the appearance dialog.
 - `qr/theme.py` holds the shared Warm Butter accent colors, the live Qt palette and stylesheet, and the icons.
@@ -24,7 +25,7 @@ QuickResize provides a focused Windows workflow for reducing or converting many 
 ## Processing flow
 
 1. Files or folders enter the queue by dropping them anywhere, or with Add files or Add folder. A background thread scans folders recursively.
-2. PDFs open the page picker immediately. Pages start unselected, and thumbnails load as they scroll into view.
+2. PDFs open the page picker immediately. Pages start unselected, and thumbnails load as they scroll into view. Each chosen page becomes its own queue row. Choosing pages again, or adding the same PDF again, keeps the rows still chosen, drops the rest, and places new pages beside their neighbors.
 3. Queue order is controlled by dragging rows, or with the move buttons or Alt+Up and Alt+Down.
 4. All output names are assigned in queue order before any decoding starts, so results are deterministic while files finish out of order. An output never takes the name of another output or any source in the batch, even when replacing existing files is allowed.
 5. Worker threads process the batch in parallel. Pillow releases the GIL while decoding, resizing, and encoding. All PyMuPDF calls share a lock because it is not thread-safe.

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026.11.25.2 — 2026-11-25
+
+### Added
+
+- Edit → Settings can export your preferences and saved sizes to a file and import them, such as on another PC. Importing adds only saved sizes whose width and height you don't already have, so importing twice adds nothing. The save folder is used only if it exists on this PC; otherwise your current folder stays.
+
+### Changed
+
+- Each chosen PDF page is its own row in the queue, so one page can be removed, with Undo, without choosing the pages again. Choosing pages again keeps the rows still chosen and places new pages beside their neighbors.
+- The queue header counts files and PDF pages separately, and counts each PDF's size once.
+
 ## 2026.11.25.1 — 2026-11-25
 
 ### Changed

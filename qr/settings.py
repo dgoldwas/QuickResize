@@ -148,29 +148,54 @@ def _read_raw(path: Path) -> dict[str, object]:
     return data if isinstance(data, dict) else {}
 
 
-def load_settings(path: Path | None = None) -> Settings:
-    raw = _read_raw(path or settings_path())
+def _parse(raw: dict[str, object], base: Settings) -> Settings:
+    """Build settings from saved values. A missing or damaged value keeps the base value."""
     fmt = raw.get("format")
     destination = raw.get("destination")
     geometry = raw.get("geometry")
     # Earlier versions stored "next to each source" as a value of the collision rule.
     collision = raw.get("collision")
     mode = raw.get("theme")
-    if "theme" not in raw and raw.get("dark_mode") is False:
-        mode = "Light"
+    accent = raw.get("accent")
+    has_place = "save_beside" in raw or collision in ("beside", "overwrite", "unique")
     return Settings(
-        width=_dimension(raw.get("width"), "1600"),
-        height=_dimension(raw.get("height"), "1600"),
-        fmt=fmt if isinstance(fmt, str) and fmt in FORMAT_INFO else "JPG",
-        quality=_quality(raw.get("quality", 92)),
-        destination=_restore_destination(destination.strip()) if isinstance(destination, str) and destination.strip() else default_destination(),
-        save_beside=raw.get("save_beside") is True or collision == "beside",
-        replace=collision == "overwrite",
-        geometry=geometry if isinstance(geometry, str) else "",
-        theme_mode=theme.mode_name(mode),
-        accent=theme.accent_name(raw.get("accent")),
-        presets=_presets(raw.get("presets")),
+        width=_dimension(raw.get("width"), base.width),
+        height=_dimension(raw.get("height"), base.height),
+        fmt=fmt if isinstance(fmt, str) and fmt in FORMAT_INFO else base.fmt,
+        quality=_quality(raw["quality"]) if "quality" in raw else base.quality,
+        destination=_restore_destination(destination.strip()) if isinstance(destination, str) and destination.strip() else base.destination,
+        save_beside=(raw.get("save_beside") is True or collision == "beside") if has_place else base.save_beside,
+        replace=collision == "overwrite" if collision in ("beside", "overwrite", "unique") else base.replace,
+        geometry=geometry if isinstance(geometry, str) else base.geometry,
+        theme_mode=theme.mode_name(mode) if isinstance(mode, str) and theme.mode_name(mode).casefold() == mode.casefold() else base.theme_mode,
+        accent=theme.accent_name(accent) if isinstance(accent, str) and theme.accent_name(accent).casefold() == accent.casefold() else base.accent,
+        presets=_presets(raw["presets"]) if "presets" in raw else list(base.presets),
     )
+
+
+def load_settings(path: Path | None = None) -> Settings:
+    raw = _read_raw(path or settings_path())
+    if "theme" not in raw and raw.get("dark_mode") is False:
+        raw["theme"] = "Light"
+    return _parse(raw, Settings(destination=default_destination()))
+
+
+def _preset_list(presets: list[SizePreset]) -> list[dict[str, object]]:
+    return [{"name": preset.name, "width": preset.width, "height": preset.height} for preset in presets]
+
+
+def _write_json(target: Path, payload: dict[str, object]) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # Not tempfile.mkstemp: on Windows it retries a denied folder almost endlessly,
+    # which froze the app when it ran from a read-only location.
+    temporary = target.with_name(f".{target.name}.{os.getpid()}.tmp")
+    try:
+        with temporary.open("w", encoding="utf-8") as stream:
+            json.dump(payload, stream, indent=2)
+        os.replace(temporary, target)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
 
 
 def save_settings(settings: Settings, path: Path | None = None) -> None:
@@ -185,7 +210,7 @@ def save_settings(settings: Settings, path: Path | None = None) -> None:
         geometry=settings.geometry,
         theme=settings.theme_mode,
         accent=settings.accent,
-        presets=[{"name": preset.name, "width": preset.width, "height": preset.height} for preset in settings.presets],
+        presets=_preset_list(settings.presets),
     )
     # An unfinished entry in a field should not erase the last good value.
     for key, value in (("width", settings.width), ("height", settings.height)):
@@ -198,16 +223,83 @@ def save_settings(settings: Settings, path: Path | None = None) -> None:
         else:
             payload["destination"] = stored
     try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        # Not tempfile.mkstemp: on Windows it retries a denied folder almost endlessly,
-        # which froze the app when it ran from a read-only location.
-        temporary = target.with_name(f".{target.name}.{os.getpid()}.tmp")
-        try:
-            with temporary.open("w", encoding="utf-8") as stream:
-                json.dump(payload, stream, indent=2)
-            os.replace(temporary, target)
-        except BaseException:
-            temporary.unlink(missing_ok=True)
-            raise
+        _write_json(target, payload)
     except OSError:
         pass
+
+
+# ---------------------------------------------------------------- export and import
+
+EXPORT_KIND = "QuickResize settings"
+
+
+def export_settings(settings: Settings, path: Path) -> None:
+    """Write the preferences to share or keep. Window size stays behind. Raises OSError."""
+    values: dict[str, object] = {
+        "format": settings.fmt,
+        "quality": settings.quality,
+        "collision": "overwrite" if settings.replace else "unique",
+        "save_beside": settings.save_beside,
+        "theme": settings.theme_mode,
+        "accent": settings.accent,
+        "presets": _preset_list(settings.presets),
+    }
+    for key, value in (("width", settings.width), ("height", settings.height)):
+        if _dimension(value, "") != "":
+            values[key] = value
+    if settings.destination.strip():
+        values["destination"] = settings.destination.strip()
+    _write_json(path, {"kind": EXPORT_KIND, "version": 1, "settings": values})
+
+
+@dataclass
+class ImportResult:
+    settings: Settings
+    added_sizes: int = 0
+    existing_sizes: int = 0
+    missing_destination: str = ""  # An imported save folder that does not exist on this PC.
+
+
+_KNOWN_KEYS = {"format", "quality", "collision", "save_beside", "theme", "accent", "presets", "width", "height", "destination"}
+
+
+def import_settings(path: Path, current: Settings) -> ImportResult:
+    """Apply an exported file over the current preferences.
+
+    Saved sizes are merged: a size whose width and height are already saved is
+    skipped, so importing twice adds nothing. Raises ValueError for a file that is
+    not QuickResize settings, and OSError when it cannot be read.
+    """
+    try:
+        with path.open("r", encoding="utf-8-sig") as handle:
+            data = json.load(handle)
+    except ValueError as exc:
+        raise ValueError("This file is not QuickResize settings.") from exc
+    # A copied settings.json works as well as an exported file.
+    raw = data.get("settings") if isinstance(data, dict) and data.get("kind") == EXPORT_KIND else data
+    if not isinstance(raw, dict) or not _KNOWN_KEYS & raw.keys():
+        raise ValueError("This file is not QuickResize settings.")
+    raw = {key: value for key, value in raw.items() if key in _KNOWN_KEYS}
+    imported = _presets(raw.pop("presets")) if isinstance(raw.get("presets"), list) else []
+    destination = raw.pop("destination", None)
+    merged = _parse(raw, current)
+    presets = list(current.presets)
+    saved = {(preset.width, preset.height) for preset in presets}
+    result = ImportResult(merged)
+    # A folder from another PC is used only when it exists here.
+    if isinstance(destination, str) and destination.strip():
+        folder = os.path.normpath(os.path.expanduser(destination.strip()))
+        if os.path.isabs(folder) and os.path.isdir(folder):
+            merged.destination = folder
+        else:
+            result.missing_destination = destination.strip()
+    for preset in imported:
+        if (preset.width, preset.height) in saved:
+            result.existing_sizes += 1
+        elif len(presets) < MAX_PRESETS:
+            presets.append(preset)
+            saved.add((preset.width, preset.height))
+            result.added_sizes += 1
+    merged.presets = presets
+    merged.geometry = current.geometry
+    return result

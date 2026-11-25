@@ -46,7 +46,7 @@ from .core import (
 )
 from .pdf_picker import PdfPagePicker
 from .preferences import PreferencesDialog
-from .settings import Settings, load_settings, save_settings
+from .settings import Settings, export_settings, import_settings, load_settings, save_settings
 from .size_presets import PresetPicker
 from .thumbnails import ThumbnailService
 from .update_ui import UpdateController
@@ -425,10 +425,52 @@ class MainWindow(QMainWindow):
     def show_preferences(self) -> None:
         dialog = PreferencesDialog(self.settings.theme_mode, self.settings.accent, self)
         dialog.changed.connect(self._change_appearance)
+        dialog.export_requested.connect(lambda: self.export_preferences(dialog))
+        dialog.import_requested.connect(lambda: self.import_preferences(dialog))
         try:
             dialog.exec()
         finally:
             dialog.deleteLater()
+
+    def export_preferences(self, dialog: PreferencesDialog) -> None:
+        start = str(Path.home() / "Documents" / "QuickResize settings.json")
+        name, _ = QFileDialog.getSaveFileName(dialog, "Export settings", start, "Settings (*.json)")
+        if not name:
+            return
+        try:
+            export_settings(self._collect_settings(), Path(name))
+        except OSError as exc:
+            dialog.note(f"Could not export: {exc.strerror or exc}", "error")
+            return
+        count = len(self.size_picker.presets)
+        dialog.note(f"Exported settings and {count} saved size{'s' if count != 1 else ''} to {Path(name).name}.")
+
+    def import_preferences(self, dialog: PreferencesDialog) -> None:
+        start = str(Path.home() / "Documents")
+        name, _ = QFileDialog.getOpenFileName(dialog, "Import settings", start, "Settings (*.json);;All files (*)")
+        if not name:
+            return
+        try:
+            result = import_settings(Path(name), self._collect_settings())
+        except (OSError, ValueError) as exc:
+            dialog.note(f"Could not import {Path(name).name}: {exc.strerror if isinstance(exc, OSError) and exc.strerror else exc}", "error")
+            return
+        self.settings = result.settings
+        self._apply_settings()
+        self.size_picker.set_presets(result.settings.presets)
+        self._set_color_scheme()
+        dialog.show_appearance(self.settings.theme_mode, self.settings.accent)
+        self._refresh()
+        self.save_now()
+        parts = []
+        if result.added_sizes:
+            parts.append(f"added {result.added_sizes} saved size{'s' if result.added_sizes != 1 else ''}")
+        if result.existing_sizes:
+            parts.append(f"{result.existing_sizes} {'was' if result.existing_sizes == 1 else 'were'} already saved")
+        text = "Imported settings" + (f": {', '.join(parts)}." if parts else ".")
+        if result.missing_destination:
+            text += f" Kept your save folder, because {result.missing_destination} doesn't exist on this PC."
+        dialog.note(text, "warn" if result.missing_destination else None)
 
     def _change_appearance(self, mode: str, accent: str) -> None:
         if (mode, accent) == (self.settings.theme_mode, self.settings.accent):
@@ -543,8 +585,14 @@ class MainWindow(QMainWindow):
         repolish(self.exists_note)
 
         images = sum(len(entry.pages) if entry.pages is not None else 1 for entry in self.entries.values())
-        total = sum(entry.size for entry in self.entries.values())
-        self.count_label.setText(f"{count} file{'s' if count != 1 else ''}")
+        sources = {path_key(entry.path): entry.size for entry in self.entries.values()}
+        total = sum(sources.values())
+        files = len(sources)
+        pages = sum(1 for entry in self.entries.values() if entry.is_pdf)
+        label_text = f"{files} file{'s' if files != 1 else ''}"
+        if pages:
+            label_text += f"  \N{MIDDLE DOT}  {pages} PDF page{'s' if pages != 1 else ''}"
+        self.count_label.setText(label_text)
         self.total_label.setText(format_bytes(total) if total else "")
         self._sync_selection()
 
@@ -714,20 +762,17 @@ class MainWindow(QMainWindow):
             if pdfs:
                 self._refresh()
                 for position, scanned in enumerate(pdfs, start=1):
-                    ids = self._rows_by_key.get(path_key(scanned.path))
-                    existing = self.entries[ids[0]] if ids else None
-                    pages, page_count = self._pick_pages(scanned.path, existing.pages if existing else None, (position, len(pdfs)))
+                    existing = self._queued_pages(scanned.path)
+                    pages, page_count = self._pick_pages(scanned.path, existing or None, (position, len(pdfs)))
                     if not self.is_scanning:
                         return
                     if not pages:
                         cancelled += 1
-                    elif existing is not None:
-                        existing.pages, existing.page_count = pages, page_count
-                        self._reset_status(existing)
+                        continue
+                    self._set_pdf_pages(scanned.path, scanned.size, pages, page_count)
+                    if existing:
                         updated += 1
                     else:
-                        entry = self._append_entry(scanned.path, scanned.size)
-                        entry.pages, entry.page_count = pages, page_count
                         added += 1
                 close_pdf_cache()
             self.is_scanning = False
@@ -736,11 +781,14 @@ class MainWindow(QMainWindow):
 
         add_chunk()
 
-    def _append_entry(self, path: Path, size: int) -> QueueEntry:
+    def _append_entry(self, path: Path, size: int, row: int | None = None) -> QueueEntry:
         entry = QueueEntry(self._next_id, path, size)
         self._next_id += 1
         self.entries[entry.id] = entry
-        self.file_list.addItem(new_item(entry))
+        if row is None:
+            self.file_list.addItem(new_item(entry))
+        else:
+            self.file_list.insertItem(row, new_item(entry))
         self._rows_by_key.setdefault(path_key(path), []).append(entry.id)
         return entry
 
@@ -765,16 +813,57 @@ class MainWindow(QMainWindow):
         finally:
             self.is_picking = False
 
+    def _queued_pages(self, path: Path) -> list[int]:
+        """The pages of a PDF that are in the queue, each of which is its own row."""
+        ids = self._rows_by_key.get(path_key(path), [])
+        return sorted(page for entry_id in ids for page in (self.entries[entry_id].pages or []))
+
+    def _set_pdf_pages(self, path: Path, size: int, pages: list[int], page_count: int | None) -> None:
+        """Make the queue hold exactly these pages of a PDF, one row each.
+
+        Rows that stay keep their place and status. A new page goes next to its
+        neighbors from the same PDF, or at the end when none are queued.
+        """
+        wanted = set(pages)
+        ids = list(self._rows_by_key.get(path_key(path), []))
+        doomed = {entry_id for entry_id in ids if not set(self.entries[entry_id].pages or []) <= wanted}
+        if doomed:
+            self._drop_entries(doomed)
+        have: set[int] = set()
+        for entry_id in self._rows_by_key.get(path_key(path), []):
+            entry = self.entries[entry_id]
+            entry.page_count = page_count
+            have.update(entry.pages or [])
+        for page in sorted(wanted - have):
+            entry = self._append_entry(path, size, self._page_row(path, page))
+            entry.pages, entry.page_count = [page], page_count
+
+    def _page_row(self, path: Path, page: int) -> int | None:
+        before = after = None
+        ids = set(self._rows_by_key.get(path_key(path), []))
+        for row in range(self.file_list.count()):
+            entry = self.file_list.entry_at(row)
+            if entry is None or entry.id not in ids or not entry.pages:
+                continue
+            if entry.pages[0] < page and (before is None or entry.pages[0] > before[0]):
+                before = (entry.pages[0], row)
+            elif entry.pages[0] > page and (after is None or entry.pages[0] < after[0]):
+                after = (entry.pages[0], row)
+        if before is not None:
+            return before[1] + 1
+        return after[1] if after is not None else None
+
     def _edit_pages(self, entry_id: int) -> None:
         entry = self.entries.get(entry_id)
         if entry is None or not self._can_accept_files():
             return
-        pages, page_count = self._pick_pages(entry.path, entry.pages)
+        path, size = entry.path, entry.size
+        pages, page_count = self._pick_pages(path, self._queued_pages(path))
         close_pdf_cache()
         if pages:
-            entry.pages, entry.page_count = pages, page_count
-            self._reset_status(entry)
-            self._say(f"Updated pages for {entry.path.name}")
+            self._snapshot()
+            self._set_pdf_pages(path, size, pages, page_count)
+            self._say(f"Updated pages for {path.name}", undoable=True)
             self._refresh()
             self.file_list.viewport().update()
 
@@ -822,7 +911,8 @@ class MainWindow(QMainWindow):
     def _remove_entry(self, entry_id: int) -> None:
         entry = self.entries.get(entry_id)
         if entry is not None:
-            self._remove_with_undo({entry_id}, f"Removed {entry.path.name}")
+            what = f"page {entry.pages[0] + 1} of {entry.path.name}" if entry.is_pdf and entry.pages and len(entry.pages) == 1 else entry.path.name
+            self._remove_with_undo({entry_id}, f"Removed {what}")
 
     def remove_selected(self) -> None:
         rows = self.file_list.selected_rows()
