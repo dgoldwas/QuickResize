@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import theme
@@ -35,6 +35,28 @@ def default_destination() -> str:
     return str(Path.home() / "Pictures" / "QuickResize")
 
 
+@dataclass(frozen=True)
+class SizePreset:
+    """A saved Fit inside box. An empty name shows the dimensions instead."""
+
+    name: str
+    width: int
+    height: int
+
+    def label(self) -> str:
+        return self.name or f"{self.width} \u00d7 {self.height}"
+
+
+DEFAULT_PRESETS = (
+    SizePreset("Large", 3000, 3000),
+    SizePreset("Screen", 1920, 1920),
+    SizePreset("Medium", 1080, 1080),
+    SizePreset("Small", 900, 900),
+)
+MAX_PRESETS = 50
+PRESET_NAME_LENGTH = 40
+
+
 @dataclass
 class Settings:
     width: str = "1600"
@@ -47,6 +69,7 @@ class Settings:
     geometry: str = ""
     theme_mode: str = theme.DEFAULT_MODE
     accent: str = theme.DEFAULT_ACCENT
+    presets: list[SizePreset] = field(default_factory=lambda: list(DEFAULT_PRESETS))
 
 
 def _store_destination(destination: str) -> str | None:
@@ -101,6 +124,21 @@ def _quality(value: object) -> int:
         return 92
 
 
+def _presets(value: object) -> list[SizePreset]:
+    """Read saved presets, skipping damaged entries. A missing list means the defaults."""
+    if not isinstance(value, list):
+        return list(DEFAULT_PRESETS)
+    result = []
+    for item in value[:MAX_PRESETS]:
+        if not isinstance(item, dict):
+            continue
+        width, height = _dimension(item.get("width"), ""), _dimension(item.get("height"), "")
+        name = item.get("name")
+        if width and height:
+            result.append(SizePreset(name.strip()[:PRESET_NAME_LENGTH] if isinstance(name, str) else "", int(width), int(height)))
+    return result
+
+
 def _read_raw(path: Path) -> dict[str, object]:
     try:
         with path.open("r", encoding="utf-8") as handle:
@@ -131,6 +169,7 @@ def load_settings(path: Path | None = None) -> Settings:
         geometry=geometry if isinstance(geometry, str) else "",
         theme_mode=theme.mode_name(mode),
         accent=theme.accent_name(raw.get("accent")),
+        presets=_presets(raw.get("presets")),
     )
 
 
@@ -146,6 +185,7 @@ def save_settings(settings: Settings, path: Path | None = None) -> None:
         geometry=settings.geometry,
         theme=settings.theme_mode,
         accent=settings.accent,
+        presets=[{"name": preset.name, "width": preset.width, "height": preset.height} for preset in settings.presets],
     )
     # An unfinished entry in a field should not erase the last good value.
     for key, value in (("width", settings.width), ("height", settings.height)):

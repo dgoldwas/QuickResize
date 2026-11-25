@@ -13,6 +13,7 @@ QuickResize provides a focused Windows workflow for reducing or converting many 
 - `installer/QuickResize.iss` is the Inno Setup script. It installs the portable folder build into Program Files. Never change its `AppId`.
 - `qr/window.py` is the main window, and owns the queue and batch state.
 - `qr/widgets.py` holds the reusable controls and the virtualized file list. `qr/pdf_picker.py` is the page picker.
+- `qr/size_presets.py` is the Fit inside dropdown. Saved sizes are picked, added, edited, and removed inline in its popup, and stored as `presets` in the settings. A missing list means the four defaults; an empty list stays empty.
 - `qr/thumbnails.py` loads previews on background threads, newest request first, with a bounded cache.
 - `qr/app_menu.py` owns the File, Edit, and Help menus. `qr/preferences.py` supplies the appearance dialog.
 - `qr/theme.py` holds the shared Warm Butter accent colors, the live Qt palette and stylesheet, and the icons.

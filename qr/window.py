@@ -47,6 +47,7 @@ from .core import (
 from .pdf_picker import PdfPagePicker
 from .preferences import PreferencesDialog
 from .settings import Settings, load_settings, save_settings
+from .size_presets import PresetPicker
 from .thumbnails import ThumbnailService
 from .update_ui import UpdateController
 from .widgets import (
@@ -64,7 +65,6 @@ from .widgets import (
     repolish,
 )
 
-PRESETS = (3000, 1920, 1080, 900)
 SCAN_INSERT_CHUNK = 500
 FORMAT_NOTES = {
     "JPG": "Best for photos. Transparent areas become white.",
@@ -261,16 +261,10 @@ class MainWindow(QMainWindow):
         # Size
         body.addWidget(label("Fit inside", "section"))
         body.addSpacing(7)
-        chips = QHBoxLayout()
-        chips.setSpacing(6)
-        self.preset_buttons: dict[int, object] = {}
-        for size in PRESETS:
-            chip = button(str(size), "chip", tooltip=f"Fit inside {size} \u00d7 {size} pixels")
-            chip.setCheckable(True)
-            chip.clicked.connect(lambda _checked=False, value=size: self._apply_preset(value))
-            self.preset_buttons[size] = chip
-            chips.addWidget(chip, 1)
-        body.addLayout(chips)
+        self.size_picker = PresetPicker(self.settings.presets)
+        self.size_picker.chosen.connect(self._apply_preset)
+        self.size_picker.presets_changed.connect(self._presets_changed)
+        body.addWidget(self.size_picker)
         body.addSpacing(8)
         size_row = QHBoxLayout()
         size_row.setSpacing(8)
@@ -463,10 +457,14 @@ class MainWindow(QMainWindow):
         self._refresh()
         self._save_timer.start()
 
-    def _apply_preset(self, size: int) -> None:
-        self.width_input.setText(str(size))
-        self.height_input.setText(str(size))
-        self._refresh()  # Re-clicking the active chip changes no text, but unchecks the chip.
+    def _apply_preset(self, width: int, height: int) -> None:
+        self.width_input.setText(str(width))
+        self.height_input.setText(str(height))
+        self._refresh()
+
+    def _presets_changed(self, presets: list) -> None:
+        self.settings.presets = list(presets)
+        self.save_now()
 
     def _dimension(self, field: QLineEdit) -> int | None:
         text = field.text().strip()
@@ -490,6 +488,7 @@ class MainWindow(QMainWindow):
             geometry=bytes(self.saveGeometry().toHex().data()).decode(),
             theme_mode=self.settings.theme_mode,
             accent=self.settings.accent,
+            presets=list(self.size_picker.presets),
         )
 
     def save_now(self) -> None:
@@ -526,9 +525,8 @@ class MainWindow(QMainWindow):
         width, height = self._dimension(self.width_input), self._dimension(self.height_input)
         self._set_invalid(self.width_input, width is None)
         self._set_invalid(self.height_input, height is None)
-        for size, chip in self.preset_buttons.items():
-            chip.setChecked(width == size and height == size)
         box = self._box()
+        self.size_picker.set_current(box)
         if box != self.delegate.box:
             self.delegate.box = box
             self.file_list.viewport().update()

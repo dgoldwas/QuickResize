@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026.11.25.1 — 2026-11-25
+
+### Changed
+
+- Fit inside presets are now a dropdown of saved sizes in place of four fixed buttons. It shows which saved size matches the width and height, or Custom size.
+- Save the current size, add new sizes, rename or change them, and remove them right in the dropdown. Sizes can have any width and height and an optional name, and are remembered in the settings.
+- The defaults are Large 3000, Screen 1920, Medium 1080, and Small 900. Removed defaults stay removed.
+
 ## 2026.11.17.3 — 2026-11-17
 
 ### Appearance

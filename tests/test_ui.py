@@ -129,16 +129,80 @@ def test_destination_ignored_when_saving_beside_originals(window, tmp_path):
     assert window.resize_button.isEnabled() and not window.folder_area.isVisibleTo(window.folder_area.parentWidget())
 
 
-def test_presets_set_both_sizes_and_highlight(window):
-    assert tuple(window.preset_buttons) == (3000, 1920, 1080, 900)
-    chip = window.preset_buttons[900]
-    chip.click()
+def open_presets(window):
+    window.size_picker.click()
+    pump()
+    popup = window.size_picker.popup
+    assert popup is not None and popup.isVisible()
+    return popup
+
+
+def choose_preset(window, label):
+    popup = open_presets(window)
+    next(item for item in popup.items if item.preset.label() == label).click()
+    pump()
+
+
+def test_presets_set_both_sizes_and_show_the_match(window):
+    assert [p.width for p in window.size_picker.presets] == [3000, 1920, 1080, 900]
+    assert window.size_picker.match() is None  # 1600 is not a saved size.
+    choose_preset(window, "Small")
     assert window.width_input.text() == window.height_input.text() == "900"
-    assert chip.isChecked() and not window.preset_buttons[3000].isChecked()
-    chip.click()  # Clicking the active chip leaves it active.
-    assert chip.isChecked()
+    assert window.size_picker.match().name == "Small" and window.size_picker.popup is None
+    popup = open_presets(window)
+    assert [item.active for item in popup.items] == [False, False, False, True]
+    popup.close()
     window.width_input.setText("901")
-    assert not chip.isChecked()
+    assert window.size_picker.match() is None
+
+
+def test_presets_can_be_added_edited_and_removed(window, settings_file):
+    window.width_input.setText("1200")
+    window.height_input.setText("800")
+    popup = open_presets(window)
+    assert popup.add_button.text().strip() == "Save 1200 \u00d7 800"
+    popup.add_button.click()
+    editor = popup.editor
+    assert (editor.width_input.text(), editor.height_input.text()) == ("1200", "800")
+    editor.name_input.setText("Blog")
+    editor.submit()
+    pump()
+    assert window.size_picker.match().name == "Blog" and popup.isVisible()
+    saved = json.loads(settings_file.read_text())["presets"]
+    assert saved[-1] == {"name": "Blog", "width": 1200, "height": 800}
+
+    popup.items[0].edit_requested.emit()
+    popup.editor.width_input.setText("0")
+    assert not popup.editor.save_button.isEnabled()
+    popup.editor.width_input.setText("2500")
+    popup.editor.name_input.setText("")
+    popup.editor.submit()
+    assert window.size_picker.presets[0].label() == "2500 \u00d7 3000"
+
+    popup.items[1].remove_requested.emit()
+    assert [p.label() for p in window.size_picker.presets] == ["2500 \u00d7 3000", "Medium", "Small", "Blog"]
+    popup.close()
+    assert [p.label() for p in load_settings(settings_file).presets] == ["2500 \u00d7 3000", "Medium", "Small", "Blog"]
+
+
+def test_preset_escape_cancels_edit_then_closes(window):
+    popup = open_presets(window)
+    popup.items[0].edit_requested.emit()
+    assert popup.editor is not None
+    QTest.keyClick(popup.editor.name_input, Qt.Key.Key_Escape)
+    assert popup.editor is None and popup.isVisible()
+    QTest.keyClick(popup.items[0], Qt.Key.Key_Escape)
+    pump()
+    assert window.size_picker.popup is None
+
+
+def test_presets_load_defaults_and_skip_damaged_entries(tmp_path):
+    path = tmp_path / "settings.json"
+    assert [p.width for p in load_settings(path).presets] == [3000, 1920, 1080, 900]
+    path.write_text(json.dumps({"presets": [{"name": "A", "width": 10, "height": "20"}, {"width": 0, "height": 5}, "x"]}))
+    assert [(p.name, p.width, p.height) for p in load_settings(path).presets] == [("A", 10, 20)]
+    path.write_text(json.dumps({"presets": []}))
+    assert load_settings(path).presets == []
 
 
 def test_quality_only_shown_for_lossy_formats(window):
@@ -176,9 +240,8 @@ def test_thumbnail_fills_in_dimensions_and_shows_target_size(window, tmp_path):
     entry = window.file_list.ordered_entries()[0]
     wait(lambda: entry.dimensions == (3000, 2000))
     assert "3000 \u00d7 2000 \u2192 1600 \u00d7 1067" in window.delegate.describe(entry)
-    window.preset_buttons[900].click()
+    choose_preset(window, "Small")
     assert "\u2192 900 \u00d7 600" in window.delegate.describe(entry)
-    window.preset_buttons[1920].click()
     window.width_input.setText("5000")
     window.height_input.setText("5000")
     assert "(kept)" in window.delegate.describe(entry)

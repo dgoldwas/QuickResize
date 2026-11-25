@@ -142,6 +142,7 @@ _ICONS = {
     "upload": '<path d="M12 16V5M7 10l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>',
     "monitor": '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 16v4M8 20h8"/>',
     "sun": '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
+    "chevron": '<path d="M7 10l5 5 5-5"/>',
     "moon": '<path d="M20 15A8 8 0 1 1 9 4a7 7 0 0 0 11 11z"/>',
 }
 
@@ -244,11 +245,36 @@ QPushButton[kind="link"] {{ background: transparent; border: none; color: {ACCEN
 QPushButton[kind="link"]:hover {{ color: {TEXT}; }}
 QPushButton[kind="link"]:focus {{ border: 1px solid {ACCENT_TEXT}; border-radius: 4px; }}
 
-QPushButton[kind="chip"] {{ border-radius: 14px; padding: 4px 0; font-size: 9pt; color: {MUTED}; min-height: 18px; }}
-QPushButton[kind="chip"]:hover {{ color: {TEXT}; }}
-QPushButton[kind="chip"]:checked {{ background: {ACCENT}; border-color: {ACCENT}; color: {ON_ACCENT}; font-weight: 600; }}
-QPushButton[kind="chip"]:focus {{ border-color: {ACCENT_TEXT}; }}
-QPushButton[kind="chip"]:checked:disabled {{ background: {SURFACE_PRESSED}; border-color: {BORDER_STRONG}; color: {MUTED}; }}
+
+QPushButton[kind="picker"] {{ background: {WELL}; border: 1px solid {BORDER}; border-radius: 8px; padding: 6px 9px; min-height: 20px; }}
+QPushButton[kind="picker"]:hover {{ background: {WELL}; border-color: {BORDER_STRONG}; }}
+QPushButton[kind="picker"]:pressed, QPushButton[kind="picker"][open="true"] {{ background: {WELL}; border-color: {ACCENT_TEXT}; }}
+QPushButton[kind="picker"]:focus {{ border-color: {ACCENT_TEXT}; }}
+QPushButton[kind="picker"]:disabled {{ background: {PANEL}; border-color: {BORDER}; }}
+
+#PresetPopup {{ background: {MENU}; border: 1px solid {MENU_BORDER}; border-radius: 10px; }}
+#PresetScroll, #PresetList {{ background: transparent; border: none; }}
+#PresetDivider {{ background: {BORDER}; border: none; }}
+#PresetEditor {{ background: {WELL}; border: 1px solid {BORDER}; border-radius: 8px; }}
+#PresetEditor QLineEdit {{ background: {SURFACE}; padding: 4px 7px; }}
+#PresetEditor QLineEdit:focus {{ border-color: {ACCENT_TEXT}; }}
+#PresetEditor QLineEdit[invalid="true"] {{ border-color: {DANGER}; }}
+QPushButton[kind="presetItem"] {{ background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 0; min-height: 30px; max-height: 30px; }}
+QPushButton[kind="presetItem"]:hover {{ background: {SURFACE_HOVER}; }}
+QPushButton[kind="presetItem"]:pressed {{ background: {SURFACE_PRESSED}; }}
+QPushButton[kind="presetItem"]:focus {{ background: {SURFACE_HOVER}; border-color: {ACCENT_TEXT}; }}
+QPushButton[kind="presetAction"] {{ background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 0 8px; min-height: 30px; max-height: 30px; text-align: left; color: {ACCENT_TEXT}; font-weight: 600; }}
+QPushButton[kind="presetAction"]:hover {{ background: {SURFACE_HOVER}; }}
+QPushButton[kind="presetAction"]:pressed {{ background: {SURFACE_PRESSED}; }}
+QPushButton[kind="presetAction"]:focus {{ border-color: {ACCENT_TEXT}; }}
+QPushButton[kind="presetAction"]:disabled {{ background: transparent; color: {FAINT}; }}
+QPushButton[kind="rowTool"] {{ background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 0; min-height: 20px; }}
+QPushButton[kind="rowTool"]:hover {{ background: {SURFACE_PRESSED}; }}
+QPushButton[kind="rowTool"]:focus {{ border-color: {ACCENT_TEXT}; }}
+QPushButton[kind="rowSave"] {{ background: {ACCENT}; border: 1px solid {ACCENT}; border-radius: 6px; padding: 0; min-height: 20px; }}
+QPushButton[kind="rowSave"]:hover {{ border-color: {ON_ACCENT}; }}
+QPushButton[kind="rowSave"]:focus {{ border-color: {ON_ACCENT}; }}
+QPushButton[kind="rowSave"]:disabled {{ background: {SURFACE_PRESSED}; border-color: {SURFACE_PRESSED}; }}
 
 #Segmented {{ background: {WELL}; border: 1px solid {BORDER}; border-radius: 9px; }}
 QPushButton[kind="segment"] {{ background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 2px; font-size: 9pt; color: {MUTED}; min-height: 18px; }}
